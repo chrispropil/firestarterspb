@@ -142,15 +142,15 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             color: #94a3b8;
             font-family: 'Inter', sans-serif;
             margin: 0;
-            padding: 24px;
+            padding: 16px;
             font-size: 13px;
         }}
         .header {{
             background-color: #0e1014;
             border: 1px solid #1e222b;
             border-radius: 6px;
-            padding: 16px 20px;
-            margin-bottom: 16px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
             display: flex;
             justify-content: space-between;
@@ -214,8 +214,8 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             background-color: #0e1014;
             border: 1px solid #1e222b;
             border-radius: 6px;
-            padding: 16px 20px;
-            margin-bottom: 16px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
         }}
         .metadata-item {{
@@ -252,8 +252,8 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             background-color: #0e1014;
             border: 1px solid #1e222b;
             border-radius: 6px;
-            padding: 10px 16px;
-            margin-bottom: 16px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
             font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
             font-size: 12px;
             color: #38bdf8;
@@ -296,7 +296,7 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
         }}
         .data-table th, .data-table td {{
-            padding: 6px 12px;
+            padding: 4px 8px;
             border-bottom: 1px solid #1e222b;
             border-right: 1px solid #1e222b;
         }}
@@ -624,7 +624,7 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             ]
         }};
 
-        Plotly.newPlot('chart', data, layout);
+        Plotly.newPlot('chart', data, layout, {{responsive: true, displaylogo: false}});
 
         const gd = document.getElementById('chart');
         gd.on('plotly_hover', function(data) {{
