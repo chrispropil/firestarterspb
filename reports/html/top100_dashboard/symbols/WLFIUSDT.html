@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>WLFIUSDT // Local Chart Viewer</title>
+    <title>WLFIUSDT // Local Research Terminal</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
     <style>
@@ -76,6 +76,47 @@
             background-color: #2563eb;
             color: #ffffff;
         }
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 12px;
+            background-color: #0e1014;
+            border: 1px solid #1e222b;
+            border-radius: 6px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+        .metadata-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .metadata-label {
+            color: #64748b;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+        .metadata-value {
+            color: #cbd5e1;
+            font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
+            font-size: 13px;
+        }
+        .font-highlight {
+            color: #38bdf8;
+            font-weight: 700;
+        }
+        .font-bold {
+            font-weight: 700;
+        }
+        .text-success {
+            color: #10b981;
+        }
+        .text-danger {
+            color: #ef4444;
+        }
         .hover-readout {
             background-color: #0e1014;
             border: 1px solid #1e222b;
@@ -87,15 +128,6 @@
             color: #38bdf8;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
         }
-        .note-banner {
-            background-color: #0f111a;
-            border-left: 3px solid #2563eb;
-            padding: 10px 16px;
-            border-radius: 4px;
-            margin-bottom: 16px;
-            font-size: 12px;
-            color: #64748b;
-        }
         #chart {
             background-color: #0e1014;
             border: 1px solid #1e222b;
@@ -103,6 +135,7 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
             padding: 12px;
             margin-bottom: 24px;
+            height: 850px;
         }
         .section-title {
             font-family: 'Outfit', sans-serif;
@@ -153,10 +186,6 @@
     </style>
 </head>
 <body>
-    <div class="note-banner">
-        Notice: Firestarter metric panels (ER/FMLC/Flowprint) not enabled yet. Current viewer shows raw OHLCV-derived panels only.
-    </div>
-
     <div class="header">
         <div class="header-title-group">
             <h2>WLFIUSDT // Local Research Terminal</h2>
@@ -269,6 +298,45 @@
                 </select>
             </div>
             <a href="../index.html" class="home-btn">Dashboard Home</a>
+        </div>
+    </div>
+
+    <div class="metadata-grid">
+        <div class="metadata-item">
+            <span class="metadata-label">Symbol</span>
+            <span class="metadata-value font-highlight">WLFIUSDT</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Time Window</span>
+            <span class="metadata-value">1-Month (5m Resolution)</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Dataset Status</span>
+            <span class="metadata-value text-success">Active / Offline Replay</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Row Count</span>
+            <span class="metadata-value">8,640</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">First Timestamp (UTC)</span>
+            <span class="metadata-value">2026-05-08 19:15:00</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Last Timestamp (UTC)</span>
+            <span class="metadata-value">2026-06-07 19:10:00</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Missing 5m Candles</span>
+            <span class="metadata-value">0</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Nonstandard Flag</span>
+            <span class="metadata-value">NO</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Firestarter Metric Status</span>
+            <span class="metadata-value text-danger font-bold">NOT ENABLED — formula gate required</span>
         </div>
     </div>
 
@@ -695,6 +763,53 @@
             yaxis: 'y2'
         };
 
+        const zeros = dates.map(() => 0.0);
+
+        // Firestarter Metrics (Disabled Placeholders)
+        const traceER = {
+            x: dates,
+            y: zeros,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'ER [formula gate required]',
+            line: { color: '#f59e0b', width: 1.0, dash: 'dot' },
+            xaxis: 'x',
+            yaxis: 'y3'
+        };
+
+        const traceFMLC = {
+            x: dates,
+            y: zeros,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'FMLC [formula gate required]',
+            line: { color: '#ef4444', width: 1.0, dash: 'dot' },
+            xaxis: 'x',
+            yaxis: 'y3'
+        };
+
+        const traceFlowprint = {
+            x: dates,
+            y: zeros,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Flowprint [formula gate required]',
+            line: { color: '#10b981', width: 1.0, dash: 'dot' },
+            xaxis: 'x',
+            yaxis: 'y3'
+        };
+
+        const traceRawScore = {
+            x: dates,
+            y: zeros,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'raw_score [formula gate required]',
+            line: { color: '#a855f7', width: 1.0, dash: 'dot' },
+            xaxis: 'x',
+            yaxis: 'y3'
+        };
+
         const traceRange = {
             x: dates,
             y: rangePct,
@@ -703,7 +818,7 @@
             name: 'Range %',
             line: { color: '#818cf8', width: 1.0 },
             xaxis: 'x',
-            yaxis: 'y3'
+            yaxis: 'y4'
         };
 
         const traceVol = {
@@ -717,10 +832,27 @@
             yaxis: 'y4'
         };
 
-        const data = [tracePrice, traceSMA20, traceSMA50, traceVolume, traceRange, traceVol];
+        const traceOverlay = {
+            x: dates,
+            y: zeros,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Overlay comparison [benchmark gate required]',
+            line: { color: '#64748b', width: 1.0, dash: 'dash' },
+            xaxis: 'x',
+            yaxis: 'y5'
+        };
+
+        const data = [
+            tracePrice, traceSMA20, traceSMA50, 
+            traceVolume, 
+            traceER, traceFMLC, traceFlowprint, traceRawScore, 
+            traceRange, traceVol, 
+            traceOverlay
+        ];
 
         const layout = {
-            grid: { rows: 4, columns: 1, pattern: 'coupled' },
+            grid: { rows: 5, columns: 1, pattern: 'coupled' },
             plot_bgcolor: '#0e1014',
             paper_bgcolor: '#08090b',
             font: {
@@ -731,44 +863,82 @@
             xaxis: {
                 gridcolor: '#1a1c23',
                 linecolor: '#1e222b',
-                tickcolor: '#1e222b'
+                tickcolor: '#1e222b',
+                anchor: 'y5'
             },
             yaxis: {
                 title: 'Price (USDT)',
                 gridcolor: '#1a1c23',
                 linecolor: '#1e222b',
                 tickcolor: '#1e222b',
-                domain: [0.55, 1.0]
+                domain: [0.68, 1.0]
             },
             yaxis2: {
                 title: 'Volume',
                 gridcolor: '#1a1c23',
                 linecolor: '#1e222b',
                 tickcolor: '#1e222b',
-                domain: [0.38, 0.52]
+                domain: [0.53, 0.65]
             },
             yaxis3: {
-                title: 'Range %',
+                title: 'Firestarter Metrics',
                 gridcolor: '#1a1c23',
                 linecolor: '#1e222b',
                 tickcolor: '#1e222b',
-                domain: [0.20, 0.35]
+                domain: [0.35, 0.50]
             },
             yaxis4: {
-                title: 'Vol %',
+                title: 'Range / Vol %',
                 gridcolor: '#1a1c23',
                 linecolor: '#1e222b',
                 tickcolor: '#1e222b',
-                domain: [0.0, 0.17]
+                domain: [0.18, 0.32]
             },
-            margin: { t: 20, b: 30, l: 60, r: 20 },
+            yaxis5: {
+                title: 'Benchmark Overlay',
+                gridcolor: '#1a1c23',
+                linecolor: '#1e222b',
+                tickcolor: '#1e222b',
+                domain: [0.0, 0.15]
+            },
+            margin: { t: 40, b: 30, l: 60, r: 20 },
             showlegend: true,
             legend: {
                 x: 0,
-                y: 1.08,
+                y: 1.05,
                 orientation: 'h',
                 font: { color: '#cbd5e1', size: 10 }
-            }
+            },
+            annotations: [
+                {
+                    xref: 'paper',
+                    yref: 'paper',
+                    x: 0.5,
+                    y: 0.425,
+                    text: 'NOT ENABLED — formula gate required',
+                    showarrow: false,
+                    font: {
+                        size: 13,
+                        color: '#ef4444',
+                        family: 'Inter, sans-serif',
+                        weight: 'bold'
+                    }
+                },
+                {
+                    xref: 'paper',
+                    yref: 'paper',
+                    x: 0.5,
+                    y: 0.075,
+                    text: 'NOT ENABLED — benchmark gate required',
+                    showarrow: false,
+                    font: {
+                        size: 13,
+                        color: '#64748b',
+                        family: 'Inter, sans-serif',
+                        weight: 'bold'
+                    }
+                }
+            ]
         };
 
         Plotly.newPlot('chart', data, layout);
@@ -784,7 +954,7 @@
             const volPctVal = rollingVol[idx];
             
             const readout = document.getElementById('hoverReadout');
-            readout.innerHTML = `[UTC TIME: ${dateStr}] // Price: ${priceVal !== undefined && priceVal !== null ? priceVal.toFixed(4) : 'N/A'} // Volume: ${volVal !== undefined && volVal !== null ? volVal.toLocaleString() : 'N/A'} // Spread: ${rangeVal !== undefined && rangeVal !== null ? rangeVal.toFixed(4) + '%' : 'N/A'} // Volatility: ${volPctVal !== undefined && volPctVal !== null ? volPctVal.toFixed(4) + '%' : 'N/A'}`;
+            readout.innerHTML = `[UTC TIME: ${dateStr}] // Price: ${priceVal !== undefined && priceVal !== null ? priceVal.toFixed(4) : 'N/A'} // Volume: ${volVal !== undefined && volVal !== null ? volVal.toLocaleString() : 'N/A'} // Spread: ${rangeVal !== undefined && rangeVal !== null ? rangeVal.toFixed(4) + '%' : 'N/A'} // Volatility: ${volPctVal !== undefined && volPctVal !== null ? volPctVal.toFixed(4) + '%' : 'N/A'} // ER/FMLC/Flowprint: [DISABLED]`;
         });
     </script>
 </body>

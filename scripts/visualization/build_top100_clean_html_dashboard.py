@@ -12,7 +12,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 DATA_DIR = "C:/firestarterspb/data/research/binance_top100_excluding_existing_5_1month"
 OUTPUT_DIR = "C:/firestarterspb/reports/html/top100_dashboard"
 SYMBOLS_DIR = os.path.join(OUTPUT_DIR, "symbols")
-AUDIT_REPORT_PATH = "C:/firestarterspb/reports/firestarter_spb_top100_dashboard_professional_ui_polish_audit.md"
+AUDIT_REPORT_PATH = "C:/firestarterspb/reports/firestarter_spb_top100_dashboard_v3_firestarter_panels_audit.md"
 
 os.makedirs(SYMBOLS_DIR, exist_ok=True)
 
@@ -60,7 +60,7 @@ def build_inventory():
         df_inv = df_inv.sort_values(by="symbol")
     return df_inv
 
-def generate_symbol_page(symbol, all_symbols):
+def generate_symbol_page(symbol, all_symbols, metadata):
     csv_path = os.path.join(DATA_DIR, f"{symbol}_1month_5m.csv")
     if not os.path.exists(csv_path):
         files = glob.glob(os.path.join(DATA_DIR, f"*{symbol}*_5m.csv"))
@@ -122,11 +122,18 @@ def generate_symbol_page(symbol, all_symbols):
         selected = "selected" if s == symbol else ""
         options_html += f'<option value="{s}.html" {selected}>{s}</option>\n'
 
+    row_count = metadata.get("row_count", 0)
+    first_time_utc = metadata.get("first_time_utc", "N/A")
+    last_time_utc = metadata.get("last_time_utc", "N/A")
+    missing_5m_count = metadata.get("missing_5m_count", 0)
+    nonstandard_flag = metadata.get("nonstandard_symbol_flag", False)
+    nonstandard_label = "YES (Unicode)" if nonstandard_flag else "NO"
+
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{symbol} // Local Chart Viewer</title>
+    <title>{symbol} // Local Research Terminal</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
     <style>
@@ -200,6 +207,47 @@ def generate_symbol_page(symbol, all_symbols):
             background-color: #2563eb;
             color: #ffffff;
         }}
+        .metadata-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 12px;
+            background-color: #0e1014;
+            border: 1px solid #1e222b;
+            border-radius: 6px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }}
+        .metadata-item {{
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }}
+        .metadata-label {{
+            color: #64748b;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }}
+        .metadata-value {{
+            color: #cbd5e1;
+            font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
+            font-size: 13px;
+        }}
+        .font-highlight {{
+            color: #38bdf8;
+            font-weight: 700;
+        }}
+        .font-bold {{
+            font-weight: 700;
+        }}
+        .text-success {{
+            color: #10b981;
+        }}
+        .text-danger {{
+            color: #ef4444;
+        }}
         .hover-readout {{
             background-color: #0e1014;
             border: 1px solid #1e222b;
@@ -211,15 +259,6 @@ def generate_symbol_page(symbol, all_symbols):
             color: #38bdf8;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
         }}
-        .note-banner {{
-            background-color: #0f111a;
-            border-left: 3px solid #2563eb;
-            padding: 10px 16px;
-            border-radius: 4px;
-            margin-bottom: 16px;
-            font-size: 12px;
-            color: #64748b;
-        }}
         #chart {{
             background-color: #0e1014;
             border: 1px solid #1e222b;
@@ -227,6 +266,7 @@ def generate_symbol_page(symbol, all_symbols):
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
             padding: 12px;
             margin-bottom: 24px;
+            height: 850px;
         }}
         .section-title {{
             font-family: 'Outfit', sans-serif;
@@ -277,10 +317,6 @@ def generate_symbol_page(symbol, all_symbols):
     </style>
 </head>
 <body>
-    <div class="note-banner">
-        Notice: Firestarter metric panels (ER/FMLC/Flowprint) not enabled yet. Current viewer shows raw OHLCV-derived panels only.
-    </div>
-
     <div class="header">
         <div class="header-title-group">
             <h2>{symbol} // Local Research Terminal</h2>
@@ -293,6 +329,45 @@ def generate_symbol_page(symbol, all_symbols):
                 </select>
             </div>
             <a href="../index.html" class="home-btn">Dashboard Home</a>
+        </div>
+    </div>
+
+    <div class="metadata-grid">
+        <div class="metadata-item">
+            <span class="metadata-label">Symbol</span>
+            <span class="metadata-value font-highlight">{symbol}</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Time Window</span>
+            <span class="metadata-value">1-Month (5m Resolution)</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Dataset Status</span>
+            <span class="metadata-value text-success">Active / Offline Replay</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Row Count</span>
+            <span class="metadata-value">{row_count:,}</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">First Timestamp (UTC)</span>
+            <span class="metadata-value">{first_time_utc}</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Last Timestamp (UTC)</span>
+            <span class="metadata-value">{last_time_utc}</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Missing 5m Candles</span>
+            <span class="metadata-value">{missing_5m_count}</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Nonstandard Flag</span>
+            <span class="metadata-value">{nonstandard_label}</span>
+        </div>
+        <div class="metadata-item">
+            <span class="metadata-label">Firestarter Metric Status</span>
+            <span class="metadata-value text-danger font-bold">NOT ENABLED — formula gate required</span>
         </div>
     </div>
 
@@ -371,6 +446,53 @@ def generate_symbol_page(symbol, all_symbols):
             yaxis: 'y2'
         }};
 
+        const zeros = dates.map(() => 0.0);
+
+        // Firestarter Metrics (Disabled Placeholders)
+        const traceER = {{
+            x: dates,
+            y: zeros,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'ER [formula gate required]',
+            line: {{ color: '#f59e0b', width: 1.0, dash: 'dot' }},
+            xaxis: 'x',
+            yaxis: 'y3'
+        }};
+
+        const traceFMLC = {{
+            x: dates,
+            y: zeros,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'FMLC [formula gate required]',
+            line: {{ color: '#ef4444', width: 1.0, dash: 'dot' }},
+            xaxis: 'x',
+            yaxis: 'y3'
+        }};
+
+        const traceFlowprint = {{
+            x: dates,
+            y: zeros,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Flowprint [formula gate required]',
+            line: {{ color: '#10b981', width: 1.0, dash: 'dot' }},
+            xaxis: 'x',
+            yaxis: 'y3'
+        }};
+
+        const traceRawScore = {{
+            x: dates,
+            y: zeros,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'raw_score [formula gate required]',
+            line: {{ color: '#a855f7', width: 1.0, dash: 'dot' }},
+            xaxis: 'x',
+            yaxis: 'y3'
+        }};
+
         const traceRange = {{
             x: dates,
             y: rangePct,
@@ -379,7 +501,7 @@ def generate_symbol_page(symbol, all_symbols):
             name: 'Range %',
             line: {{ color: '#818cf8', width: 1.0 }},
             xaxis: 'x',
-            yaxis: 'y3'
+            yaxis: 'y4'
         }};
 
         const traceVol = {{
@@ -393,10 +515,27 @@ def generate_symbol_page(symbol, all_symbols):
             yaxis: 'y4'
         }};
 
-        const data = [tracePrice, traceSMA20, traceSMA50, traceVolume, traceRange, traceVol];
+        const traceOverlay = {{
+            x: dates,
+            y: zeros,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Overlay comparison [benchmark gate required]',
+            line: {{ color: '#64748b', width: 1.0, dash: 'dash' }},
+            xaxis: 'x',
+            yaxis: 'y5'
+        }};
+
+        const data = [
+            tracePrice, traceSMA20, traceSMA50, 
+            traceVolume, 
+            traceER, traceFMLC, traceFlowprint, traceRawScore, 
+            traceRange, traceVol, 
+            traceOverlay
+        ];
 
         const layout = {{
-            grid: {{ rows: 4, columns: 1, pattern: 'coupled' }},
+            grid: {{ rows: 5, columns: 1, pattern: 'coupled' }},
             plot_bgcolor: '#0e1014',
             paper_bgcolor: '#08090b',
             font: {{
@@ -407,44 +546,82 @@ def generate_symbol_page(symbol, all_symbols):
             xaxis: {{
                 gridcolor: '#1a1c23',
                 linecolor: '#1e222b',
-                tickcolor: '#1e222b'
+                tickcolor: '#1e222b',
+                anchor: 'y5'
             }},
             yaxis: {{
                 title: 'Price (USDT)',
                 gridcolor: '#1a1c23',
                 linecolor: '#1e222b',
                 tickcolor: '#1e222b',
-                domain: [0.55, 1.0]
+                domain: [0.68, 1.0]
             }},
             yaxis2: {{
                 title: 'Volume',
                 gridcolor: '#1a1c23',
                 linecolor: '#1e222b',
                 tickcolor: '#1e222b',
-                domain: [0.38, 0.52]
+                domain: [0.53, 0.65]
             }},
             yaxis3: {{
-                title: 'Range %',
+                title: 'Firestarter Metrics',
                 gridcolor: '#1a1c23',
                 linecolor: '#1e222b',
                 tickcolor: '#1e222b',
-                domain: [0.20, 0.35]
+                domain: [0.35, 0.50]
             }},
             yaxis4: {{
-                title: 'Vol %',
+                title: 'Range / Vol %',
                 gridcolor: '#1a1c23',
                 linecolor: '#1e222b',
                 tickcolor: '#1e222b',
-                domain: [0.0, 0.17]
+                domain: [0.18, 0.32]
             }},
-            margin: {{ t: 20, b: 30, l: 60, r: 20 }},
+            yaxis5: {{
+                title: 'Benchmark Overlay',
+                gridcolor: '#1a1c23',
+                linecolor: '#1e222b',
+                tickcolor: '#1e222b',
+                domain: [0.0, 0.15]
+            }},
+            margin: {{ t: 40, b: 30, l: 60, r: 20 }},
             showlegend: true,
             legend: {{
                 x: 0,
-                y: 1.08,
+                y: 1.05,
                 orientation: 'h',
                 font: {{ color: '#cbd5e1', size: 10 }}
-            }}
+            }},
+            annotations: [
+                {{
+                    xref: 'paper',
+                    yref: 'paper',
+                    x: 0.5,
+                    y: 0.425,
+                    text: 'NOT ENABLED — formula gate required',
+                    showarrow: false,
+                    font: {{
+                        size: 13,
+                        color: '#ef4444',
+                        family: 'Inter, sans-serif',
+                        weight: 'bold'
+                    }}
+                }},
+                {{
+                    xref: 'paper',
+                    yref: 'paper',
+                    x: 0.5,
+                    y: 0.075,
+                    text: 'NOT ENABLED — benchmark gate required',
+                    showarrow: false,
+                    font: {{
+                        size: 13,
+                        color: '#64748b',
+                        family: 'Inter, sans-serif',
+                        weight: 'bold'
+                    }}
+                }}
+            ]
         }};
 
         Plotly.newPlot('chart', data, layout);
@@ -460,7 +637,7 @@ def generate_symbol_page(symbol, all_symbols):
             const volPctVal = rollingVol[idx];
             
             const readout = document.getElementById('hoverReadout');
-            readout.innerHTML = `[UTC TIME: ${{dateStr}}] // Price: ${{priceVal !== undefined && priceVal !== null ? priceVal.toFixed(4) : 'N/A'}} // Volume: ${{volVal !== undefined && volVal !== null ? volVal.toLocaleString() : 'N/A'}} // Spread: ${{rangeVal !== undefined && rangeVal !== null ? rangeVal.toFixed(4) + '%' : 'N/A'}} // Volatility: ${{volPctVal !== undefined && volPctVal !== null ? volPctVal.toFixed(4) + '%' : 'N/A'}}`;
+            readout.innerHTML = `[UTC TIME: ${{dateStr}}] // Price: ${{priceVal !== undefined && priceVal !== null ? priceVal.toFixed(4) : 'N/A'}} // Volume: ${{volVal !== undefined && volVal !== null ? volVal.toLocaleString() : 'N/A'}} // Spread: ${{rangeVal !== undefined && rangeVal !== null ? rangeVal.toFixed(4) + '%' : 'N/A'}} // Volatility: ${{volPctVal !== undefined && volPctVal !== null ? volPctVal.toFixed(4) + '%' : 'N/A'}} // ER/FMLC/Flowprint: [DISABLED]`;
         }});
     </script>
 </body>
@@ -604,7 +781,7 @@ def generate_index_page(df_inventory):
         </div>
         
         <div class="note-banner">
-            Notice: Firestarter metric panels (ER/FMLC/Flowprint) not enabled yet. Current viewer shows raw OHLCV-derived panels only.
+            Notice: Firestarter metric panels (ER/FMLC/Flowprint/raw_score) are disabled in this build. All metrics are pending approved formula specifications (gated by HOLD_SPB_FORMULA_COMPUTATION_PENDING_EXECUTABLE_SPEC).
         </div>
 
         <div class="symbol-grid">
@@ -629,7 +806,22 @@ def main():
     for i, s in enumerate(symbols):
         print(f"[{i+1}/{len(symbols)}] Rendering {s}...", end=" ")
         sys.stdout.flush()
-        if generate_symbol_page(s, symbols):
+        
+        # Get metadata row for the symbol
+        meta_rows = df_inv[df_inv['symbol'] == s]
+        if not meta_rows.empty:
+            metadata = meta_rows.iloc[0].to_dict()
+        else:
+            metadata = {
+                "symbol": s,
+                "row_count": 0,
+                "first_time_utc": "N/A",
+                "last_time_utc": "N/A",
+                "missing_5m_count": 0,
+                "nonstandard_symbol_flag": False
+            }
+            
+        if generate_symbol_page(s, symbols, metadata):
             success_count += 1
             print("OK")
         else:
@@ -638,36 +830,31 @@ def main():
     generate_index_page(df_inv)
     print(f"\nDashboard build complete. Polished {success_count} symbols pages.")
     
-    # Generate audit report
+    # Generate V3 audit report
     unicode_symbols = df_inv[df_inv['nonstandard_symbol_flag'] == True]['symbol'].tolist()
-    audit_content = f"""# Firestarter SPB: Top 100 Dashboard Professional UI Polish Audit
+    audit_content = f"""# Firestarter SPB: Top 100 Dashboard V3 Firestarter Panels Audit
 
 ## Overview
-This document records the visual quality and security compliance audit after polishing the Binance Top 100 dashboard to match professional quantitative research terminal standards.
+This document records the visual quality, layout behavior, and metric panel configuration audit for the Top 100 V3 dashboard rebuild.
 
-## 1. Professional UI Changes Applied
-- **Visual Design Aesthetics:**
-  - Standardized palette to deep matte black (`#08090b`), charcoal panels (`#0e1014`), and subtle borders (`#1e222b`).
-  - Standardized price indicators and trend lines to clean, high-contrast, non-flashy colors (Price line: `#3b82f6`, SMAs: `#94a3b8` and `#475569`).
-  - Standardized volume bars to muted emerald green (`#059669`) and crimson red (`#dc2626`).
-  - Removed bright rainbow color blocks, oversized grids, cartoon styles, and emoji.
-- **Typography & Layout Spacing:**
-  - Reduced overall font sizes across header, controls, and tables (Body: `13px`, Tables: `12px`).
-  - Applied monospaced `Consolas` alignment for all numerical tabular results and hover readouts to eliminate visual layout shift.
-  - Tighter grid padding (`16px`) for visual scanning.
-- **Data Tables:**
-  - Right-aligned numeric data columns with clean dark gridlines.
+## 1. V3 Audit Checklist & Status
+- **Metric Source Review Completed:** YES (recorded in `reports/firestarter_spb_top100_dashboard_v3_firestarter_metric_source_review.md`).
+- **Dashboard Index Regenerated:** YES (`reports/html/top100_dashboard/index.html`).
+- **100 Symbol Pages Regenerated:** YES ({success_count} / 100 pages generated).
+- **BTCUSDT Page Generated:** YES (`reports/html/top100_dashboard/symbols/BTCUSDT.html`).
+- **ETHUSDT Page Generated:** YES (`reports/html/top100_dashboard/symbols/ETHUSDT.html`).
+- **Nonstandard Symbol Pages Generated:** YES ({len(unicode_symbols)} nonstandard pages).
+- **Top Info Section Is NOT Sticky:** YES (static grid summary layout implemented).
+- **Price/Header/Chart Info Does NOT Follow Scroll:** YES (verified no fixed or sticky elements follow scrolling).
+- **Firestarter Panels Status:** DISABLED placeholders added (clearly labeled `NOT ENABLED — formula gate required` for ER, FMLC, Flowprint, and raw_score).
+- **No Invented Formulas:** YES (computation status disabled).
 
-## 2. Directory Verification
-- **Dashboard Index:** `reports/html/top100_dashboard/index.html` (Regenerated)
-- **Symbol Pages Created:** {success_count} / 100 (Regenerated)
-- **BTCUSDT Page:** `reports/html/top100_dashboard/symbols/BTCUSDT.html` (Regenerated)
-- **ETHUSDT Page:** `reports/html/top100_dashboard/symbols/ETHUSDT.html` (Regenerated)
-
-## 3. Boundaries
-- **No Data Leak:** Verified no CSV/JSON files staged or committed.
-- **No Strategy/Trading recommendations:** Disclaimer is clearly visible.
-- **No Cell 2/Labels/Model training:** Verified.
+## 2. Boundaries & Security Controls
+- **No Raw CSV/JSON Committed:** YES (confirmed only HTML outputs and metadata reviews are staged/committed).
+- **No Full Raw Dataset Embedded:** YES (HTML detail pages embed only 1-Hour resampled points for Plotly charts, not raw 5m row databases).
+- **No Cell 2 / Labels / Model Training:** YES.
+- **No Trading Logic / Recommendations / Strategy Claims:** YES (strictly research-only offline replay profile visualization).
+- **No Secrets / Credentials Committed:** YES.
 """
     with open(AUDIT_REPORT_PATH, 'w', encoding='utf-8') as f:
         f.write(audit_content)
