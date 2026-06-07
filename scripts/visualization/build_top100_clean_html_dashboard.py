@@ -571,76 +571,67 @@ def generate_symbol_page(symbol, all_symbols, metadata):
     <script>
         const chartData = {json.dumps(chart_data)};
 
-        const dates = chartData.dates;
+        const dates    = chartData.dates;
         const closeArr = chartData.close;
-        const openArr  = chartData.open;
-        const highArr  = chartData.high;
-        const lowArr   = chartData.low;
-        const volumeArr = chartData.volume;
-        const rangePct  = chartData.range_pct;
+        const rangePct = chartData.range_pct;
         const rollingVol = chartData.rolling_vol;
 
-        const er       = chartData.er;
-        const fmlc     = chartData.fmlc;
+        const er        = chartData.er;
+        const fmlc      = chartData.fmlc;
         const flowprint = chartData.flowprint;
         const rawScore  = chartData.raw_score;
 
-        // Volume bar colors (muted green/red)
-        const volColors = closeArr.map((c, i) => c >= openArr[i] ? 'rgba(5,150,105,0.55)' : 'rgba(220,38,38,0.55)');
-
-        // ── Panel 1 (top): Price line — primary y-axis (left)
+        // ── Panel 1 (top): White price line — no overlays, no SMA
         const tracePrice = {{
             x: dates, y: closeArr,
             type: 'scatter', mode: 'lines',
-            name: '1H Close',
-            line: {{ color: '#3b82f6', width: 1.5 }},
+            name: 'Price',
+            line: {{ color: '#ffffff', width: 1.4 }},
             yaxis: 'y'
         }};
 
-        // ── Panel 1 (top): Firestarter metric overlays — secondary y-axis (right, 0-10 scale)
-        // Cell 1 partial reconstruction — approved sandbox defaults — no trading logic
+        // ── Panel 2: ER — vertical bars, own panel, fixed 0–10
+        // Cell 1 partial reconstruction — approved sandbox defaults — research only
+        const erColors = er.map(v => {{
+            if (v === null || v === undefined) return 'rgba(100,116,139,0.4)';
+            if (v >= 7) return 'rgba(245,158,11,0.85)';
+            if (v >= 4) return 'rgba(245,158,11,0.55)';
+            return 'rgba(245,158,11,0.28)';
+        }});
         const traceER = {{
             x: dates, y: er,
-            type: 'scatter', mode: 'lines',
-            name: 'ER (0-10)',
-            line: {{ color: 'rgba(245,158,11,0.70)', width: 1.0 }},
+            type: 'bar',
+            name: 'ER',
+            marker: {{ color: erColors }},
             yaxis: 'y2'
         }};
 
+        // ── Panel 3: FMLC / Flowprint_proxy / raw_score lines
         const traceFMLC = {{
             x: dates, y: fmlc,
             type: 'scatter', mode: 'lines',
             name: 'FMLC (0-10)',
-            line: {{ color: 'rgba(239,68,68,0.70)', width: 1.0 }},
-            yaxis: 'y2'
+            line: {{ color: 'rgba(239,68,68,0.80)', width: 1.0 }},
+            yaxis: 'y3'
         }};
 
         const traceFlowprint = {{
             x: dates, y: flowprint,
             type: 'scatter', mode: 'lines',
             name: 'Flowprint_proxy (0-8)',
-            line: {{ color: 'rgba(16,185,129,0.70)', width: 1.0 }},
-            yaxis: 'y2'
+            line: {{ color: 'rgba(16,185,129,0.80)', width: 1.0 }},
+            yaxis: 'y3'
         }};
 
         const traceRawScore = {{
             x: dates, y: rawScore,
             type: 'scatter', mode: 'lines',
             name: 'raw_score (0-10)',
-            line: {{ color: 'rgba(168,85,247,0.85)', width: 1.6 }},
-            yaxis: 'y2'
-        }};
-
-        // ── Panel 2 (middle): Volume bars
-        const traceVolume = {{
-            x: dates, y: volumeArr,
-            type: 'bar',
-            name: 'Volume',
-            marker: {{ color: volColors }},
+            line: {{ color: 'rgba(168,85,247,0.90)', width: 1.6 }},
             yaxis: 'y3'
         }};
 
-        // ── Panel 3 (bottom): Range % and Rolling Volatility
+        // ── Panel 4 (bottom): Range % and Rolling Volatility
         const traceRange = {{
             x: dates, y: rangePct,
             type: 'scatter', mode: 'lines',
@@ -659,8 +650,8 @@ def generate_symbol_page(symbol, all_symbols, metadata):
 
         const data = [
             tracePrice,
-            traceER, traceFMLC, traceFlowprint, traceRawScore,
-            traceVolume,
+            traceER,
+            traceFMLC, traceFlowprint, traceRawScore,
             traceRange, traceRollingVol
         ];
 
@@ -668,61 +659,72 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             plot_bgcolor:  '#0e1014',
             paper_bgcolor: '#08090b',
             font: {{ family: 'Inter, sans-serif', size: 11, color: '#64748b' }},
+            bargap: 0.15,
 
-            // Shared x-axis
             xaxis: {{
                 gridcolor: '#1a1c23', linecolor: '#1e222b', tickcolor: '#1e222b',
                 domain: [0, 1]
             }},
 
-            // Panel 1 — price (left y-axis)
+            // Panel 1 — white price line, no overlays
             yaxis: {{
                 title: 'Price (USDT)',
-                gridcolor: '#1a1c23', linecolor: '#1e222b', tickcolor: '#1e222b',
-                domain: [0.48, 1.0],
-                side: 'left'
+                gridcolor: '#1e222b', linecolor: '#1e222b', tickcolor: '#1e222b',
+                tickfont: {{ color: '#94a3b8' }},
+                domain: [0.64, 1.0]
             }},
 
-            // Panel 1 — Firestarter overlay (right y-axis, 0-10)
+            // Panel 2 — ER bars, fixed 0–10
             yaxis2: {{
-                title: 'Metric (0–10)  ← Cell 1 overlay',
-                gridcolor: 'rgba(30,34,43,0.0)',
-                linecolor: '#1e222b', tickcolor: '#1e222b',
-                overlaying: 'y',
-                side: 'right',
+                title: 'ER  (0–10)',
+                gridcolor: '#1e222b', linecolor: '#1e222b', tickcolor: '#1e222b',
+                tickfont: {{ color: '#f59e0b' }},
+                domain: [0.43, 0.60],
                 range: [0, 10],
-                showgrid: false
+                fixedrange: true
             }},
 
-            // Panel 2 — volume
+            // Panel 3 — FMLC / Flowprint / raw_score
             yaxis3: {{
-                title: 'Volume',
-                gridcolor: '#1a1c23', linecolor: '#1e222b', tickcolor: '#1e222b',
-                domain: [0.26, 0.44]
+                title: 'Metrics (0–10)',
+                gridcolor: '#1e222b', linecolor: '#1e222b', tickcolor: '#1e222b',
+                tickfont: {{ color: '#94a3b8' }},
+                domain: [0.22, 0.39],
+                range: [0, 10],
+                fixedrange: true
             }},
 
-            // Panel 3 — range/vol %
+            // Panel 4 — Range / Vol %
             yaxis4: {{
                 title: 'Range / Vol %',
-                gridcolor: '#1a1c23', linecolor: '#1e222b', tickcolor: '#1e222b',
-                domain: [0.0, 0.22]
+                gridcolor: '#1e222b', linecolor: '#1e222b', tickcolor: '#1e222b',
+                tickfont: {{ color: '#94a3b8' }},
+                domain: [0.0, 0.18]
             }},
 
-            margin: {{ t: 50, b: 30, l: 65, r: 80 }},
+            margin: {{ t: 48, b: 28, l: 68, r: 55 }},
             showlegend: true,
             legend: {{
-                x: 0, y: 1.06,
+                x: 0, y: 1.055,
                 orientation: 'h',
                 font: {{ color: '#cbd5e1', size: 10 }}
             }},
             annotations: [
                 {{
                     xref: 'paper', yref: 'paper',
-                    x: 1.0, y: 1.04,
+                    x: 1.0, y: 1.038,
                     xanchor: 'right', yanchor: 'bottom',
                     text: 'Cell 1 partial reconstruction · Approved sandbox defaults · Research only',
                     showarrow: false,
                     font: {{ size: 9, color: '#475569', family: 'Inter, sans-serif' }}
+                }},
+                {{
+                    xref: 'paper', yref: 'paper',
+                    x: 0, y: 0.595,
+                    xanchor: 'left', yanchor: 'bottom',
+                    text: 'ER — Expansion Readiness  |  bars  |  0–10',
+                    showarrow: false,
+                    font: {{ size: 9, color: '#f59e0b', family: 'Inter, sans-serif' }}
                 }}
             ]
         }};
@@ -733,19 +735,18 @@ def generate_symbol_page(symbol, all_symbols, metadata):
         gd.on('plotly_hover', function(eventData) {{
             const pts = eventData.points[0];
             const idx = pts.pointIndex;
-            const dateStr  = pts.x;
-            const price    = closeArr[idx];
-            const vol      = volumeArr[idx];
-            const rng      = rangePct[idx];
-            const rvol     = rollingVol[idx];
-            const erVal    = er[idx];
-            const fmlcVal  = fmlc[idx];
-            const fpVal    = flowprint[idx];
-            const rawVal   = rawScore[idx];
+            const dateStr = pts.x;
+            const price   = closeArr[idx];
+            const rng     = rangePct[idx];
+            const rv      = rollingVol[idx];
+            const erVal   = er[idx];
+            const fmlcVal = fmlc[idx];
+            const fpVal   = flowprint[idx];
+            const rawVal  = rawScore[idx];
             const fmt = (v, d=4) => (v !== undefined && v !== null) ? (+v).toFixed(d) : 'N/A';
             const readout = document.getElementById('hoverReadout');
             readout.innerHTML =
-                `[UTC: ${{dateStr}}] &nbsp;|&nbsp; Price: ${{fmt(price)}} &nbsp;|&nbsp; Vol: ${{vol !== undefined && vol !== null ? (+vol).toLocaleString(undefined, {{maximumFractionDigits:2}}) : 'N/A'}} &nbsp;|&nbsp; Range: ${{fmt(rng,3)}}% &nbsp;|&nbsp; RVol: ${{fmt(rvol,3)}}% &nbsp;|&nbsp;&nbsp;<b style="color:#f59e0b">ER: ${{fmt(erVal,2)}}</b> &nbsp;|&nbsp; <b style="color:#ef4444">FMLC: ${{fmt(fmlcVal,2)}}</b> &nbsp;|&nbsp; <b style="color:#10b981">FP: ${{fmt(fpVal,2)}}</b> &nbsp;|&nbsp; <b style="color:#a855f7">Score: ${{fmt(rawVal,2)}}</b>`;
+                `[UTC: ${{dateStr}}] &nbsp;|&nbsp; Price: ${{fmt(price)}} &nbsp;|&nbsp; Range: ${{fmt(rng,3)}}% &nbsp;|&nbsp; RVol: ${{fmt(rv,3)}}% &nbsp;|&nbsp;&nbsp;<b style="color:#f59e0b">ER: ${{fmt(erVal,2)}}</b> &nbsp;|&nbsp; <b style="color:#ef4444">FMLC: ${{fmt(fmlcVal,2)}}</b> &nbsp;|&nbsp; <b style="color:#10b981">FP: ${{fmt(fpVal,2)}}</b> &nbsp;|&nbsp; <b style="color:#a855f7">Score: ${{fmt(rawVal,2)}}</b>`;
         }});
     </script>
 </body>

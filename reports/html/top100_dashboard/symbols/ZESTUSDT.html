@@ -712,76 +712,67 @@
     <script>
         const chartData = {"dates": ["2026-06-04T14:00:00Z", "2026-06-04T15:00:00Z", "2026-06-04T16:00:00Z", "2026-06-04T17:00:00Z", "2026-06-04T18:00:00Z", "2026-06-04T19:00:00Z", "2026-06-04T20:00:00Z", "2026-06-04T21:00:00Z", "2026-06-04T22:00:00Z", "2026-06-04T23:00:00Z", "2026-06-05T00:00:00Z", "2026-06-05T01:00:00Z", "2026-06-05T02:00:00Z", "2026-06-05T03:00:00Z", "2026-06-05T04:00:00Z", "2026-06-05T05:00:00Z", "2026-06-05T06:00:00Z", "2026-06-05T07:00:00Z", "2026-06-05T08:00:00Z", "2026-06-05T09:00:00Z", "2026-06-05T10:00:00Z", "2026-06-05T11:00:00Z", "2026-06-05T12:00:00Z", "2026-06-05T13:00:00Z", "2026-06-05T14:00:00Z", "2026-06-05T15:00:00Z", "2026-06-05T16:00:00Z", "2026-06-05T17:00:00Z", "2026-06-05T18:00:00Z", "2026-06-05T19:00:00Z", "2026-06-05T20:00:00Z", "2026-06-05T21:00:00Z", "2026-06-05T22:00:00Z", "2026-06-05T23:00:00Z", "2026-06-06T00:00:00Z", "2026-06-06T01:00:00Z", "2026-06-06T02:00:00Z", "2026-06-06T03:00:00Z", "2026-06-06T04:00:00Z", "2026-06-06T05:00:00Z", "2026-06-06T06:00:00Z", "2026-06-06T07:00:00Z", "2026-06-06T08:00:00Z", "2026-06-06T09:00:00Z", "2026-06-06T10:00:00Z", "2026-06-06T11:00:00Z", "2026-06-06T12:00:00Z", "2026-06-06T13:00:00Z", "2026-06-06T14:00:00Z", "2026-06-06T15:00:00Z", "2026-06-06T16:00:00Z", "2026-06-06T17:00:00Z", "2026-06-06T18:00:00Z", "2026-06-06T19:00:00Z", "2026-06-06T20:00:00Z", "2026-06-06T21:00:00Z", "2026-06-06T22:00:00Z", "2026-06-06T23:00:00Z", "2026-06-07T00:00:00Z", "2026-06-07T01:00:00Z", "2026-06-07T02:00:00Z", "2026-06-07T03:00:00Z", "2026-06-07T04:00:00Z", "2026-06-07T05:00:00Z", "2026-06-07T06:00:00Z", "2026-06-07T07:00:00Z", "2026-06-07T08:00:00Z", "2026-06-07T09:00:00Z", "2026-06-07T10:00:00Z", "2026-06-07T11:00:00Z", "2026-06-07T12:00:00Z", "2026-06-07T13:00:00Z", "2026-06-07T14:00:00Z", "2026-06-07T15:00:00Z", "2026-06-07T16:00:00Z", "2026-06-07T17:00:00Z", "2026-06-07T18:00:00Z", "2026-06-07T19:00:00Z"], "open": [0.235, 0.26117, 0.26893, 0.24321, 0.25915, 0.25634, 0.25045, 0.24225, 0.22146, 0.22524, 0.22986, 0.23761, 0.24068, 0.29538, 0.2716, 0.2727, 0.25696, 0.25174, 0.23829, 0.24685, 0.25301, 0.23453, 0.23761, 0.24755, 0.24092, 0.22349, 0.22795, 0.23796, 0.23522, 0.22758, 0.23658, 0.24275, 0.25088, 0.26722, 0.27229, 0.26254, 0.26972, 0.2517, 0.25578, 0.2574, 0.26957, 0.28012, 0.28041, 0.28484, 0.28074, 0.2723, 0.26484, 0.26707, 0.26475, 0.27874, 0.28019, 0.28152, 0.26121, 0.26365, 0.27296, 0.2784, 0.27961, 0.27395, 0.27078, 0.27179, 0.28146, 0.27111, 0.27833, 0.28443, 0.28905, 0.28338, 0.27889, 0.2834, 0.29163, 0.28488, 0.29336, 0.29828, 0.29249, 0.28672, 0.2982, 0.29815, 0.29925, 0.29205], "high": [0.2785, 0.27961, 0.275, 0.269, 0.266, 0.25736, 0.26065, 0.24326, 0.23326, 0.23906, 0.24623, 0.2427, 0.30846, 0.29583, 0.28211, 0.2876, 0.25924, 0.25331, 0.2509, 0.26187, 0.2546, 0.24277, 0.25179, 0.25073, 0.24224, 0.23235, 0.24327, 0.23927, 0.23758, 0.23896, 0.24875, 0.2562, 0.26767, 0.28658, 0.27449, 0.27893, 0.27586, 0.25978, 0.26159, 0.27278, 0.28525, 0.29291, 0.28695, 0.295, 0.29431, 0.27278, 0.27291, 0.2715, 0.28379, 0.287, 0.28599, 0.28192, 0.26669, 0.28, 0.2807, 0.28316, 0.27982, 0.28032, 0.27345, 0.28198, 0.28175, 0.28687, 0.29194, 0.291, 0.29095, 0.28351, 0.28399, 0.29626, 0.29319, 0.2976, 0.29998, 0.3, 0.29863, 0.29883, 0.3, 0.3, 0.30087, 0.29212], "low": [0.205, 0.24421, 0.22072, 0.23859, 0.24919, 0.24532, 0.24011, 0.22021, 0.22053, 0.22493, 0.22568, 0.23236, 0.23872, 0.26436, 0.2657, 0.24741, 0.2421, 0.229, 0.237, 0.24368, 0.23154, 0.23201, 0.2375, 0.24035, 0.2233, 0.22109, 0.22596, 0.2328, 0.22695, 0.22067, 0.23422, 0.2412, 0.24621, 0.26283, 0.25764, 0.25308, 0.25004, 0.24738, 0.24206, 0.25283, 0.26853, 0.27096, 0.27163, 0.27854, 0.26482, 0.2619, 0.2616, 0.25783, 0.26371, 0.27103, 0.279, 0.254, 0.25712, 0.26241, 0.27152, 0.27672, 0.27224, 0.26861, 0.26389, 0.26955, 0.26842, 0.27028, 0.27339, 0.281, 0.27704, 0.27513, 0.2771, 0.2822, 0.28, 0.28475, 0.2924, 0.29218, 0.28213, 0.28502, 0.29535, 0.29725, 0.28855, 0.28666], "close": [0.26164, 0.26879, 0.24305, 0.2591, 0.25633, 0.25062, 0.24237, 0.22134, 0.2252, 0.22985, 0.23741, 0.24066, 0.29518, 0.2717, 0.27287, 0.25687, 0.25161, 0.23845, 0.24695, 0.25301, 0.23462, 0.23765, 0.24739, 0.24092, 0.22348, 0.22817, 0.23789, 0.23535, 0.22758, 0.23679, 0.24288, 0.25088, 0.26736, 0.2721, 0.2625, 0.2698, 0.25175, 0.25565, 0.25724, 0.26948, 0.28007, 0.28048, 0.28488, 0.2807, 0.27266, 0.26467, 0.26705, 0.2647, 0.27847, 0.27992, 0.28155, 0.2612, 0.26369, 0.273, 0.27842, 0.27959, 0.2739, 0.27075, 0.27176, 0.28145, 0.27112, 0.27834, 0.28443, 0.28905, 0.28339, 0.27891, 0.28339, 0.29182, 0.28482, 0.29334, 0.29836, 0.29253, 0.28672, 0.2982, 0.2982, 0.29924, 0.29205, 0.2895], "volume": [62103618, 34819141, 31391133, 13078291, 8375754, 6632677, 6306810, 7882930, 3540753, 2814802, 7253653, 4450267, 27082995, 30808281, 9228227, 15136971, 13226534, 12415311, 9326408, 8237253, 7181934, 4546732, 5485759, 3521668, 10047018, 6686181, 6143704, 3088621, 3823614, 5415601, 3930061, 5098347, 7483777, 14353854, 10735688, 7245906, 8276839, 4175057, 4853095, 5396231, 6877862, 9094545, 6669508, 7694263, 13263373, 6436436, 4390364, 4397507, 5445058, 6785759, 3664224, 9947286, 3499435, 4024075, 2365688, 2568218, 2311387, 2386362, 2765742, 3279575, 2731019, 4347126, 5146174, 5208347, 4519967, 2583229, 2252963, 8039010, 4552174, 5180126, 5319915, 4955406, 6448743, 3542377, 5200239, 2589960, 3358317, 892663], "range_pct": [31.27659574468087, 13.554389861010074, 20.183690923288598, 12.503597713909798, 6.486590777541972, 4.696886947023471, 8.201237772010382, 9.514963880288963, 5.748216382190911, 6.273308470964306, 8.940224484468812, 4.351668700812251, 28.976234003656316, 10.654072719886248, 6.041973490427112, 14.737807114044749, 6.670298879202995, 9.656788750297913, 5.8332284191531425, 7.368847478225636, 9.114264258329708, 4.587899202660648, 6.014056647447509, 4.193092304584932, 7.861530798605351, 5.038256745268241, 7.593770563720111, 2.7189443603967067, 4.519173539664995, 8.036734335178839, 6.141685687716623, 6.179196704428418, 8.553890306122453, 8.887807798817452, 6.18825516912117, 9.84611868667631, 9.572890404864307, 4.926499801350824, 7.635467980295562, 7.750582750582759, 6.202470601328046, 7.835927459660155, 5.463428551050248, 5.77868276927397, 10.504381278050872, 3.995593095850166, 4.27050294517444, 5.118508256262409, 7.584513692162413, 5.729353519408763, 2.4947357150505, 9.917590224495596, 3.663718846904777, 6.671723876351241, 3.363130128956632, 2.3132183908045985, 2.710918779728919, 4.274502646468332, 3.5305413989216383, 4.573383862540932, 4.7360193277908085, 6.11928737412858, 6.664750476053589, 3.515803536898342, 4.8123162082684585, 2.957159997176935, 2.470508085625159, 4.961185603387444, 4.522854301683633, 4.5106711597865665, 2.5838560130897297, 2.621697733673057, 5.641218503196694, 4.816545758928568, 1.5593561368209212, 0.9223545195371372, 4.116959064327503, 1.8695428864920272], "rolling_vol": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 6.85743312169122, 6.829506927654309, 6.522948331604642, 6.374578094023099, 6.571954423357631, 6.588906942464119, 6.630429102554607, 6.292637460294488, 6.33477551425798, 6.381026511685074, 6.365164902137595, 6.398352526704568, 4.572827923141596, 4.208942596983594, 4.283112909346533, 4.098217933822191, 4.376885357184871, 4.199399521159324, 4.1344029751416445, 4.2261597952097345, 3.863268291563032, 3.865470239905687, 3.7972167403467894, 3.751475310409315, 3.334621356243673, 3.438004703772448, 3.3427138321928798, 3.3380493665687343, 3.345845707522717, 3.273448212776641, 3.2490340359797734, 3.673896761917349, 3.3841213474692577, 3.453711068987532, 3.370691363407182, 3.3215382510782736, 2.928796952891052, 2.9367259486409574, 2.9357695023006993, 2.8560724229291985, 2.8518502553376135, 2.9191923155739246, 2.9397612172582273, 2.9396072651978344, 2.895865003654381, 2.832144889872873, 2.844637941355858, 2.888863669445048, 2.745759809360772, 2.81743136148476, 2.835652975941679, 2.2437219575133693, 2.3134222308222747, 2.347082426397276, 2.3208990503045643, 2.320830655301931, 2.3426771936569817, 2.334210899871529], "er": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4.0, 5.0, 4.0, 0.0, 1.0, 0.0, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, 6.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4.0, 4.0, 5.0, 4.0, 0.0, 0.0, 6.0, 1.0, 3.0, 5.0, 2.0, 5.0, 4.0, 5.0, 3.0, 1.0, 0.0], "fmlc": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], "flowprint": [null, null, null, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 4.0, 3.0, 5.0, 5.0, 4.0, 3.0, 1.0, 1.0, 0.0, 1.0, 4.0, 2.0, 2.0, 5.0, 3.0, 4.0, 3.0, 5.0, 3.0, 2.0, 5.0, 3.0, 4.0, 5.0, 6.0, 4.0, 2.0, 2.0, 2.0, 2.0, 3.0, 6.0, 6.0, 5.0, 6.0, 7.0, 3.0, 3.0, 4.0, 4.0, 5.0, 2.0, 1.0, 1.0, 1.0, 2.0, 3.0, 2.0, 2.0, 2.0, 4.0, 6.0, 4.0, 4.0, 3.0, 1.0, 0.0, 4.0, 7.0, 6.0, 4.0, 6.0, 6.0, 5.0, 3.0, 5.0, 3.0, 3.0, null], "raw_score": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]};
 
-        const dates = chartData.dates;
+        const dates    = chartData.dates;
         const closeArr = chartData.close;
-        const openArr  = chartData.open;
-        const highArr  = chartData.high;
-        const lowArr   = chartData.low;
-        const volumeArr = chartData.volume;
-        const rangePct  = chartData.range_pct;
+        const rangePct = chartData.range_pct;
         const rollingVol = chartData.rolling_vol;
 
-        const er       = chartData.er;
-        const fmlc     = chartData.fmlc;
+        const er        = chartData.er;
+        const fmlc      = chartData.fmlc;
         const flowprint = chartData.flowprint;
         const rawScore  = chartData.raw_score;
 
-        // Volume bar colors (muted green/red)
-        const volColors = closeArr.map((c, i) => c >= openArr[i] ? 'rgba(5,150,105,0.55)' : 'rgba(220,38,38,0.55)');
-
-        // ── Panel 1 (top): Price line — primary y-axis (left)
+        // ── Panel 1 (top): White price line — no overlays, no SMA
         const tracePrice = {
             x: dates, y: closeArr,
             type: 'scatter', mode: 'lines',
-            name: '1H Close',
-            line: { color: '#3b82f6', width: 1.5 },
+            name: 'Price',
+            line: { color: '#ffffff', width: 1.4 },
             yaxis: 'y'
         };
 
-        // ── Panel 1 (top): Firestarter metric overlays — secondary y-axis (right, 0-10 scale)
-        // Cell 1 partial reconstruction — approved sandbox defaults — no trading logic
+        // ── Panel 2: ER — vertical bars, own panel, fixed 0–10
+        // Cell 1 partial reconstruction — approved sandbox defaults — research only
+        const erColors = er.map(v => {
+            if (v === null || v === undefined) return 'rgba(100,116,139,0.4)';
+            if (v >= 7) return 'rgba(245,158,11,0.85)';
+            if (v >= 4) return 'rgba(245,158,11,0.55)';
+            return 'rgba(245,158,11,0.28)';
+        });
         const traceER = {
             x: dates, y: er,
-            type: 'scatter', mode: 'lines',
-            name: 'ER (0-10)',
-            line: { color: 'rgba(245,158,11,0.70)', width: 1.0 },
+            type: 'bar',
+            name: 'ER',
+            marker: { color: erColors },
             yaxis: 'y2'
         };
 
+        // ── Panel 3: FMLC / Flowprint_proxy / raw_score lines
         const traceFMLC = {
             x: dates, y: fmlc,
             type: 'scatter', mode: 'lines',
             name: 'FMLC (0-10)',
-            line: { color: 'rgba(239,68,68,0.70)', width: 1.0 },
-            yaxis: 'y2'
+            line: { color: 'rgba(239,68,68,0.80)', width: 1.0 },
+            yaxis: 'y3'
         };
 
         const traceFlowprint = {
             x: dates, y: flowprint,
             type: 'scatter', mode: 'lines',
             name: 'Flowprint_proxy (0-8)',
-            line: { color: 'rgba(16,185,129,0.70)', width: 1.0 },
-            yaxis: 'y2'
+            line: { color: 'rgba(16,185,129,0.80)', width: 1.0 },
+            yaxis: 'y3'
         };
 
         const traceRawScore = {
             x: dates, y: rawScore,
             type: 'scatter', mode: 'lines',
             name: 'raw_score (0-10)',
-            line: { color: 'rgba(168,85,247,0.85)', width: 1.6 },
-            yaxis: 'y2'
-        };
-
-        // ── Panel 2 (middle): Volume bars
-        const traceVolume = {
-            x: dates, y: volumeArr,
-            type: 'bar',
-            name: 'Volume',
-            marker: { color: volColors },
+            line: { color: 'rgba(168,85,247,0.90)', width: 1.6 },
             yaxis: 'y3'
         };
 
-        // ── Panel 3 (bottom): Range % and Rolling Volatility
+        // ── Panel 4 (bottom): Range % and Rolling Volatility
         const traceRange = {
             x: dates, y: rangePct,
             type: 'scatter', mode: 'lines',
@@ -800,8 +791,8 @@
 
         const data = [
             tracePrice,
-            traceER, traceFMLC, traceFlowprint, traceRawScore,
-            traceVolume,
+            traceER,
+            traceFMLC, traceFlowprint, traceRawScore,
             traceRange, traceRollingVol
         ];
 
@@ -809,61 +800,72 @@
             plot_bgcolor:  '#0e1014',
             paper_bgcolor: '#08090b',
             font: { family: 'Inter, sans-serif', size: 11, color: '#64748b' },
+            bargap: 0.15,
 
-            // Shared x-axis
             xaxis: {
                 gridcolor: '#1a1c23', linecolor: '#1e222b', tickcolor: '#1e222b',
                 domain: [0, 1]
             },
 
-            // Panel 1 — price (left y-axis)
+            // Panel 1 — white price line, no overlays
             yaxis: {
                 title: 'Price (USDT)',
-                gridcolor: '#1a1c23', linecolor: '#1e222b', tickcolor: '#1e222b',
-                domain: [0.48, 1.0],
-                side: 'left'
+                gridcolor: '#1e222b', linecolor: '#1e222b', tickcolor: '#1e222b',
+                tickfont: { color: '#94a3b8' },
+                domain: [0.64, 1.0]
             },
 
-            // Panel 1 — Firestarter overlay (right y-axis, 0-10)
+            // Panel 2 — ER bars, fixed 0–10
             yaxis2: {
-                title: 'Metric (0–10)  ← Cell 1 overlay',
-                gridcolor: 'rgba(30,34,43,0.0)',
-                linecolor: '#1e222b', tickcolor: '#1e222b',
-                overlaying: 'y',
-                side: 'right',
+                title: 'ER  (0–10)',
+                gridcolor: '#1e222b', linecolor: '#1e222b', tickcolor: '#1e222b',
+                tickfont: { color: '#f59e0b' },
+                domain: [0.43, 0.60],
                 range: [0, 10],
-                showgrid: false
+                fixedrange: true
             },
 
-            // Panel 2 — volume
+            // Panel 3 — FMLC / Flowprint / raw_score
             yaxis3: {
-                title: 'Volume',
-                gridcolor: '#1a1c23', linecolor: '#1e222b', tickcolor: '#1e222b',
-                domain: [0.26, 0.44]
+                title: 'Metrics (0–10)',
+                gridcolor: '#1e222b', linecolor: '#1e222b', tickcolor: '#1e222b',
+                tickfont: { color: '#94a3b8' },
+                domain: [0.22, 0.39],
+                range: [0, 10],
+                fixedrange: true
             },
 
-            // Panel 3 — range/vol %
+            // Panel 4 — Range / Vol %
             yaxis4: {
                 title: 'Range / Vol %',
-                gridcolor: '#1a1c23', linecolor: '#1e222b', tickcolor: '#1e222b',
-                domain: [0.0, 0.22]
+                gridcolor: '#1e222b', linecolor: '#1e222b', tickcolor: '#1e222b',
+                tickfont: { color: '#94a3b8' },
+                domain: [0.0, 0.18]
             },
 
-            margin: { t: 50, b: 30, l: 65, r: 80 },
+            margin: { t: 48, b: 28, l: 68, r: 55 },
             showlegend: true,
             legend: {
-                x: 0, y: 1.06,
+                x: 0, y: 1.055,
                 orientation: 'h',
                 font: { color: '#cbd5e1', size: 10 }
             },
             annotations: [
                 {
                     xref: 'paper', yref: 'paper',
-                    x: 1.0, y: 1.04,
+                    x: 1.0, y: 1.038,
                     xanchor: 'right', yanchor: 'bottom',
                     text: 'Cell 1 partial reconstruction · Approved sandbox defaults · Research only',
                     showarrow: false,
                     font: { size: 9, color: '#475569', family: 'Inter, sans-serif' }
+                },
+                {
+                    xref: 'paper', yref: 'paper',
+                    x: 0, y: 0.595,
+                    xanchor: 'left', yanchor: 'bottom',
+                    text: 'ER — Expansion Readiness  |  bars  |  0–10',
+                    showarrow: false,
+                    font: { size: 9, color: '#f59e0b', family: 'Inter, sans-serif' }
                 }
             ]
         };
@@ -874,19 +876,18 @@
         gd.on('plotly_hover', function(eventData) {
             const pts = eventData.points[0];
             const idx = pts.pointIndex;
-            const dateStr  = pts.x;
-            const price    = closeArr[idx];
-            const vol      = volumeArr[idx];
-            const rng      = rangePct[idx];
-            const rvol     = rollingVol[idx];
-            const erVal    = er[idx];
-            const fmlcVal  = fmlc[idx];
-            const fpVal    = flowprint[idx];
-            const rawVal   = rawScore[idx];
+            const dateStr = pts.x;
+            const price   = closeArr[idx];
+            const rng     = rangePct[idx];
+            const rv      = rollingVol[idx];
+            const erVal   = er[idx];
+            const fmlcVal = fmlc[idx];
+            const fpVal   = flowprint[idx];
+            const rawVal  = rawScore[idx];
             const fmt = (v, d=4) => (v !== undefined && v !== null) ? (+v).toFixed(d) : 'N/A';
             const readout = document.getElementById('hoverReadout');
             readout.innerHTML =
-                `[UTC: ${dateStr}] &nbsp;|&nbsp; Price: ${fmt(price)} &nbsp;|&nbsp; Vol: ${vol !== undefined && vol !== null ? (+vol).toLocaleString(undefined, {maximumFractionDigits:2}) : 'N/A'} &nbsp;|&nbsp; Range: ${fmt(rng,3)}% &nbsp;|&nbsp; RVol: ${fmt(rvol,3)}% &nbsp;|&nbsp;&nbsp;<b style="color:#f59e0b">ER: ${fmt(erVal,2)}</b> &nbsp;|&nbsp; <b style="color:#ef4444">FMLC: ${fmt(fmlcVal,2)}</b> &nbsp;|&nbsp; <b style="color:#10b981">FP: ${fmt(fpVal,2)}</b> &nbsp;|&nbsp; <b style="color:#a855f7">Score: ${fmt(rawVal,2)}</b>`;
+                `[UTC: ${dateStr}] &nbsp;|&nbsp; Price: ${fmt(price)} &nbsp;|&nbsp; Range: ${fmt(rng,3)}% &nbsp;|&nbsp; RVol: ${fmt(rv,3)}% &nbsp;|&nbsp;&nbsp;<b style="color:#f59e0b">ER: ${fmt(erVal,2)}</b> &nbsp;|&nbsp; <b style="color:#ef4444">FMLC: ${fmt(fmlcVal,2)}</b> &nbsp;|&nbsp; <b style="color:#10b981">FP: ${fmt(fpVal,2)}</b> &nbsp;|&nbsp; <b style="color:#a855f7">Score: ${fmt(rawVal,2)}</b>`;
         });
     </script>
 </body>
