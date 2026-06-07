@@ -113,112 +113,119 @@ def merge_derivatives(df_1h, deriv_data):
     return df_merged
 
 def compute_cell1_metrics(df_merged):
-    # Calculate derived price indicators
-    df_merged['sma_20'] = df_merged['close'].rolling(20).mean()
-    df_merged['sma_50'] = df_merged['close'].rolling(50).mean()
+    # EMA 21 and volume baseline — SMA 20/50 removed from output, not charted
     df_merged['ema_21'] = df_merged['close'].ewm(span=21, adjust=False).mean()
     df_merged['vol_avg_10'] = df_merged['volume'].rolling(10).mean()
-    
-    # RVOL 1H and 4H
+    # EMA 50 used internally for trend scoring only (not charted)
+    df_merged['_ema_50'] = df_merged['close'].ewm(span=50, adjust=False).mean()
+
+    # RVOL 1H (24-bar approved default)
     df_merged['rvol_1h'] = df_merged['volume'] / df_merged['volume'].rolling(24).mean()
     df_merged['vol_4h'] = df_merged['volume'].rolling(4).sum()
     df_merged['rvol_4h'] = df_merged['vol_4h'] / df_merged['vol_4h'].rolling(96).mean()
-    
-    # 24h change
+
+    # 24h change (anti-blowoff governor)
     df_merged['change_24h'] = (df_merged['close'] - df_merged['close'].shift(24)) / df_merged['close'].shift(24) * 100
-    
+
     # 1. ER Calculation
     high_20 = df_merged['high'].rolling(20).max()
     rvol = df_merged['rvol_1h']
-    
+
     rvol_score = np.zeros(len(df_merged))
     rvol_score[rvol > 2.5] = 4
     rvol_score[(rvol > 1.8) & (rvol <= 2.5)] = 3
     rvol_score[(rvol > 1.2) & (rvol <= 1.8)] = 2
     rvol_score[(rvol > 0.8) & (rvol <= 1.2)] = 1
-    
+
     near_breakout = np.zeros(len(df_merged))
     near_breakout[df_merged['close'] >= 0.99 * high_20] = 3
     near_breakout[(df_merged['close'] >= 0.975 * high_20) & (df_merged['close'] < 0.99 * high_20)] = 1
-    
+
     clean_reclaim = np.zeros(len(df_merged))
     clean_reclaim[(df_merged['close'] > df_merged['ema_21']) & (df_merged['volume'] > 1.2 * df_merged['vol_avg_10'])] = 3
-    
+
     er_raw = rvol_score + near_breakout + clean_reclaim
     df_merged['er'] = np.clip(er_raw, 0, 10)
-    
-    # Handle ER missing lookbacks
+
     er_na = df_merged['close'].isna() | df_merged['rvol_1h'].isna() | high_20.isna()
     df_merged.loc[er_na, 'er'] = np.nan
 
     # 2. FMLC Calculation
     df_merged['quote_volume'] = df_merged['volume'] * df_merged['close']
     df_merged['quote_volume_24h'] = df_merged['quote_volume'].rolling(24).sum()
-    
+
     high_200 = df_merged['high'].rolling(200).max()
     low_200 = df_merged['low'].rolling(200).min()
-    rp_50_4h = (df_merged['close'] - low_200) / (high_200 - low_200) * 10
-    
+    rp_200 = (df_merged['close'] - low_200) / (high_200 - low_200) * 10
+
     low_20 = df_merged['low'].rolling(20).min()
     rp_20 = (df_merged['close'] - low_20) / (high_20 - low_20) * 10
-    
-    composite_rp = 0.5 * rp_50_4h + 0.5 * rp_20
+
+    composite_rp = 0.5 * rp_200 + 0.5 * rp_20
     composite_rp_score = composite_rp / 2.0  # max 5 points
-    
+
+    # Trend score uses internal EMA50 (not charted) per approved default
     trend_score = np.zeros(len(df_merged))
-    trend_score[df_merged['close'] > df_merged['sma_50']] = 3
-    trend_score[(df_merged['close'] <= df_merged['sma_50']) & (df_merged['close'] > df_merged['ema_21'])] = 1
-    
+    trend_score[df_merged['close'] > df_merged['_ema_50']] = 3
+    trend_score[(df_merged['close'] <= df_merged['_ema_50']) & (df_merged['close'] > df_merged['ema_21'])] = 1
+
     funding_score = np.zeros(len(df_merged))
     funding_score[df_merged['fundingRate'] <= 0.0001] = 2
     funding_score[(df_merged['fundingRate'] > 0.0001) & (df_merged['fundingRate'] <= 0.0005)] = 1
-    
+
     governor_penalty = np.zeros(len(df_merged))
     governor_penalty[(df_merged['change_24h'] >= 15) | (df_merged['change_24h'] <= -15)] = 4
-    
+
     fmlc_raw = composite_rp_score + trend_score + funding_score - governor_penalty
     df_merged['fmlc'] = np.clip(fmlc_raw, 0, 10)
-    
-    # Apply FMLC Liquidity Floor Check ($10,000,000 daily quote volume)
+
+    # Liquidity floor: $10M daily quote volume
     df_merged.loc[df_merged['quote_volume_24h'] < 10000000, 'fmlc'] = 0
-    
-    # Handle FMLC missing lookbacks/derivatives
+
     fmlc_na = df_merged['fundingRate'].isna() | df_merged['change_24h'].isna() | high_200.isna() | low_20.isna()
     df_merged.loc[fmlc_na, 'fmlc'] = np.nan
 
     # 3. Flowprint_proxy Calculation
-    df_merged['oi_change_1h'] = (df_merged['sumOpenInterest'] - df_merged['sumOpenInterest'].shift(1)) / df_merged['sumOpenInterest'].shift(1) * 100
-    
+    df_merged['oi_change_1h'] = (
+        (df_merged['sumOpenInterest'] - df_merged['sumOpenInterest'].shift(1))
+        / df_merged['sumOpenInterest'].shift(1) * 100
+    )
+
     funding_quality = np.zeros(len(df_merged))
     funding_quality[(df_merged['fundingRate'] >= -0.0001) & (df_merged['fundingRate'] <= 0.0003)] = 2
-    
+
     taker_ratio = df_merged['buySellRatio'] / (df_merged['buySellRatio'] + 1)
     taker_score = np.zeros(len(df_merged))
     taker_score[taker_ratio >= 0.52] = 2
     taker_score[(taker_ratio >= 0.48) & (taker_ratio < 0.52)] = 1
-    
+
     rvol_fp_score = np.zeros(len(df_merged))
     rvol_fp_score[rvol > 1.5] = 2
     rvol_fp_score[(rvol > 1.0) & (rvol <= 1.5)] = 1
-    
+
     oi_score = np.zeros(len(df_merged))
     oi_score[df_merged['oi_change_1h'] > 1.5] = 2
     oi_score[(df_merged['oi_change_1h'] > 0) & (df_merged['oi_change_1h'] <= 1.5)] = 1
-    
+
     flowprint_raw = funding_quality + taker_score + rvol_fp_score + oi_score
     df_merged['flowprint'] = np.clip(flowprint_raw, 0, 8)
-    
-    # Handle Flowprint missing lookbacks/derivatives
-    flowprint_na = df_merged['volume'].isna() | df_merged['buySellRatio'].isna() | df_merged['sumOpenInterest'].isna() | df_merged['fundingRate'].isna() | df_merged['oi_change_1h'].isna()
+
+    flowprint_na = (
+        df_merged['volume'].isna() | df_merged['buySellRatio'].isna()
+        | df_merged['sumOpenInterest'].isna() | df_merged['fundingRate'].isna()
+        | df_merged['oi_change_1h'].isna()
+    )
     df_merged.loc[flowprint_na, 'flowprint'] = np.nan
 
-    # 4. raw_score Calculation
+    # 4. raw_score
     raw_score = df_merged['er'] * 0.35 + df_merged['fmlc'] * 0.35 + df_merged['flowprint'] * 0.30
     df_merged['raw_score'] = np.clip(raw_score / 0.94, 0, 10)
-    
-    # Strict Gating
+
     raw_score_na = df_merged['er'].isna() | df_merged['fmlc'].isna() | df_merged['flowprint'].isna()
     df_merged.loc[raw_score_na, 'raw_score'] = np.nan
+
+    # Drop internal columns not needed downstream
+    df_merged.drop(columns=['_ema_50'], errors='ignore', inplace=True)
 
     return df_merged
 
@@ -261,7 +268,7 @@ def generate_symbol_page(symbol, all_symbols, metadata):
     # Clean missing values for JSON serialization
     df_merged = df_merged.replace({np.nan: None})
 
-    # Prepare JS data payload
+    # Prepare JS data payload — SMA 20/50 removed, Firestarter metrics overlay price
     chart_data = {
         "dates": df_merged.index.strftime('%Y-%m-%dT%H:%M:%SZ').tolist(),
         "open": df_merged['open'].tolist(),
@@ -269,8 +276,6 @@ def generate_symbol_page(symbol, all_symbols, metadata):
         "low": df_merged['low'].tolist(),
         "close": df_merged['close'].tolist(),
         "volume": df_merged['volume'].tolist(),
-        "sma_20": df_merged['sma_20'].tolist(),
-        "sma_50": df_merged['sma_50'].tolist(),
         "range_pct": df_merged['range_pct'].tolist(),
         "rolling_vol": df_merged['rolling_vol'].tolist(),
         "er": df_merged['er'].tolist(),
@@ -565,221 +570,159 @@ def generate_symbol_page(symbol, all_symbols, metadata):
 
     <script>
         const chartData = {json.dumps(chart_data)};
-        
+
         const dates = chartData.dates;
-        const close = chartData.close;
-        const open = chartData.open;
-        const high = chartData.high;
-        const low = chartData.low;
-        const volume = chartData.volume;
-        const sma20 = chartData.sma_20;
-        const sma50 = chartData.sma_50;
-        const rangePct = chartData.range_pct;
+        const closeArr = chartData.close;
+        const openArr  = chartData.open;
+        const highArr  = chartData.high;
+        const lowArr   = chartData.low;
+        const volumeArr = chartData.volume;
+        const rangePct  = chartData.range_pct;
         const rollingVol = chartData.rolling_vol;
 
-        // Muted volume colors
-        const volColors = close.map((c, i) => c >= open[i] ? '#059669' : '#dc2626');
+        const er       = chartData.er;
+        const fmlc     = chartData.fmlc;
+        const flowprint = chartData.flowprint;
+        const rawScore  = chartData.raw_score;
 
+        // Volume bar colors (muted green/red)
+        const volColors = closeArr.map((c, i) => c >= openArr[i] ? 'rgba(5,150,105,0.55)' : 'rgba(220,38,38,0.55)');
+
+        // ── Panel 1 (top): Price line — primary y-axis (left)
         const tracePrice = {{
-            x: dates,
-            y: close,
-            type: 'scatter',
-            mode: 'lines',
-            name: '1h Close',
-            line: {{ color: '#3b82f6', width: 1.2 }}
+            x: dates, y: closeArr,
+            type: 'scatter', mode: 'lines',
+            name: '1H Close',
+            line: {{ color: '#3b82f6', width: 1.5 }},
+            yaxis: 'y'
         }};
 
-        const traceSMA20 = {{
-            x: dates,
-            y: sma20,
-            type: 'scatter',
-            mode: 'lines',
-            name: '20 SMA',
-            line: {{ color: '#94a3b8', width: 1.0, dash: 'dash' }}
-        }};
-
-        const traceSMA50 = {{
-            x: dates,
-            y: sma50,
-            type: 'scatter',
-            mode: 'lines',
-            name: '50 SMA',
-            line: {{ color: '#475569', width: 1.0, dash: 'dash' }}
-        }};
-
-        const traceVolume = {{
-            x: dates,
-            y: volume,
-            type: 'bar',
-            name: 'Volume',
-            marker: {{ color: volColors }},
-            xaxis: 'x',
+        // ── Panel 1 (top): Firestarter metric overlays — secondary y-axis (right, 0-10 scale)
+        // Cell 1 partial reconstruction — approved sandbox defaults — no trading logic
+        const traceER = {{
+            x: dates, y: er,
+            type: 'scatter', mode: 'lines',
+            name: 'ER (0-10)',
+            line: {{ color: 'rgba(245,158,11,0.70)', width: 1.0 }},
             yaxis: 'y2'
         }};
 
-        const er = chartData.er;
-        const fmlc = chartData.fmlc;
-        const flowprint = chartData.flowprint;
-        const rawScore = chartData.raw_score;
-
-        // Firestarter Metrics (Active Reconstructed Metrics)
-        const traceER = {{
-            x: dates,
-            y: er,
-            type: 'scatter',
-            mode: 'lines',
-            name: 'ER',
-            line: {{ color: '#f59e0b', width: 1.2 }},
-            xaxis: 'x',
-            yaxis: 'y3'
-        }};
-
         const traceFMLC = {{
-            x: dates,
-            y: fmlc,
-            type: 'scatter',
-            mode: 'lines',
-            name: 'FMLC',
-            line: {{ color: '#ef4444', width: 1.2 }},
-            xaxis: 'x',
-            yaxis: 'y3'
+            x: dates, y: fmlc,
+            type: 'scatter', mode: 'lines',
+            name: 'FMLC (0-10)',
+            line: {{ color: 'rgba(239,68,68,0.70)', width: 1.0 }},
+            yaxis: 'y2'
         }};
 
         const traceFlowprint = {{
-            x: dates,
-            y: flowprint,
-            type: 'scatter',
-            mode: 'lines',
-            name: 'Flowprint_proxy',
-            line: {{ color: '#10b981', width: 1.2 }},
-            xaxis: 'x',
-            yaxis: 'y3'
+            x: dates, y: flowprint,
+            type: 'scatter', mode: 'lines',
+            name: 'Flowprint_proxy (0-8)',
+            line: {{ color: 'rgba(16,185,129,0.70)', width: 1.0 }},
+            yaxis: 'y2'
         }};
 
         const traceRawScore = {{
-            x: dates,
-            y: rawScore,
-            type: 'scatter',
-            mode: 'lines',
-            name: 'raw_score',
-            line: {{ color: '#a855f7', width: 1.5 }},
-            xaxis: 'x',
+            x: dates, y: rawScore,
+            type: 'scatter', mode: 'lines',
+            name: 'raw_score (0-10)',
+            line: {{ color: 'rgba(168,85,247,0.85)', width: 1.6 }},
+            yaxis: 'y2'
+        }};
+
+        // ── Panel 2 (middle): Volume bars
+        const traceVolume = {{
+            x: dates, y: volumeArr,
+            type: 'bar',
+            name: 'Volume',
+            marker: {{ color: volColors }},
             yaxis: 'y3'
         }};
 
+        // ── Panel 3 (bottom): Range % and Rolling Volatility
         const traceRange = {{
-            x: dates,
-            y: rangePct,
-            type: 'scatter',
-            mode: 'lines',
+            x: dates, y: rangePct,
+            type: 'scatter', mode: 'lines',
             name: 'Range %',
             line: {{ color: '#818cf8', width: 1.0 }},
-            xaxis: 'x',
             yaxis: 'y4'
         }};
 
-        const traceVol = {{
-            x: dates,
-            y: rollingVol,
-            type: 'scatter',
-            mode: 'lines',
-            name: 'Rolling Vol',
+        const traceRollingVol = {{
+            x: dates, y: rollingVol,
+            type: 'scatter', mode: 'lines',
+            name: 'Rolling Vol %',
             line: {{ color: '#06b6d4', width: 1.0 }},
-            xaxis: 'x',
             yaxis: 'y4'
-        }};
-
-        const traceOverlay = {{
-            x: dates,
-            y: dates.map(() => null),
-            type: 'scatter',
-            mode: 'lines',
-            name: 'Overlay comparison',
-            line: {{ color: '#64748b', width: 1.0, dash: 'dash' }},
-            xaxis: 'x',
-            yaxis: 'y5'
         }};
 
         const data = [
-            tracePrice, traceSMA20, traceSMA50, 
-            traceVolume, 
-            traceER, traceFMLC, traceFlowprint, traceRawScore, 
-            traceRange, traceVol, 
-            traceOverlay
+            tracePrice,
+            traceER, traceFMLC, traceFlowprint, traceRawScore,
+            traceVolume,
+            traceRange, traceRollingVol
         ];
 
         const layout = {{
-            grid: {{ rows: 5, columns: 1, pattern: 'coupled' }},
-            plot_bgcolor: '#0e1014',
+            plot_bgcolor:  '#0e1014',
             paper_bgcolor: '#08090b',
-            font: {{
-                family: 'Inter, sans-serif',
-                size: 11,
-                color: '#64748b'
-            }},
+            font: {{ family: 'Inter, sans-serif', size: 11, color: '#64748b' }},
+
+            // Shared x-axis
             xaxis: {{
-                gridcolor: '#1a1c23',
-                linecolor: '#1e222b',
-                tickcolor: '#1e222b',
-                anchor: 'y5'
+                gridcolor: '#1a1c23', linecolor: '#1e222b', tickcolor: '#1e222b',
+                domain: [0, 1]
             }},
+
+            // Panel 1 — price (left y-axis)
             yaxis: {{
                 title: 'Price (USDT)',
-                gridcolor: '#1a1c23',
-                linecolor: '#1e222b',
-                tickcolor: '#1e222b',
-                domain: [0.68, 1.0]
+                gridcolor: '#1a1c23', linecolor: '#1e222b', tickcolor: '#1e222b',
+                domain: [0.48, 1.0],
+                side: 'left'
             }},
+
+            // Panel 1 — Firestarter overlay (right y-axis, 0-10)
             yaxis2: {{
-                title: 'Volume',
-                gridcolor: '#1a1c23',
-                linecolor: '#1e222b',
-                tickcolor: '#1e222b',
-                domain: [0.53, 0.65]
+                title: 'Metric (0–10)  ← Cell 1 overlay',
+                gridcolor: 'rgba(30,34,43,0.0)',
+                linecolor: '#1e222b', tickcolor: '#1e222b',
+                overlaying: 'y',
+                side: 'right',
+                range: [0, 10],
+                showgrid: false
             }},
+
+            // Panel 2 — volume
             yaxis3: {{
-                title: 'Firestarter Metrics',
-                gridcolor: '#1a1c23',
-                linecolor: '#1e222b',
-                tickcolor: '#1e222b',
-                domain: [0.35, 0.50]
+                title: 'Volume',
+                gridcolor: '#1a1c23', linecolor: '#1e222b', tickcolor: '#1e222b',
+                domain: [0.26, 0.44]
             }},
+
+            // Panel 3 — range/vol %
             yaxis4: {{
                 title: 'Range / Vol %',
-                gridcolor: '#1a1c23',
-                linecolor: '#1e222b',
-                tickcolor: '#1e222b',
-                domain: [0.18, 0.32]
+                gridcolor: '#1a1c23', linecolor: '#1e222b', tickcolor: '#1e222b',
+                domain: [0.0, 0.22]
             }},
-            yaxis5: {{
-                title: 'Benchmark Overlay',
-                gridcolor: '#1a1c23',
-                linecolor: '#1e222b',
-                tickcolor: '#1e222b',
-                domain: [0.0, 0.15]
-            }},
-            margin: {{ t: 40, b: 30, l: 60, r: 20 }},
+
+            margin: {{ t: 50, b: 30, l: 65, r: 80 }},
             showlegend: true,
             legend: {{
-                x: 0,
-                y: 1.05,
+                x: 0, y: 1.06,
                 orientation: 'h',
                 font: {{ color: '#cbd5e1', size: 10 }}
             }},
             annotations: [
                 {{
-                    xref: 'paper',
-                    yref: 'paper',
-                    x: 0.5,
-                    y: 0.425,
-                    text: 'Cell 1 Reconstructed (Approved Sandbox Defaults)',
+                    xref: 'paper', yref: 'paper',
+                    x: 1.0, y: 1.04,
+                    xanchor: 'right', yanchor: 'bottom',
+                    text: 'Cell 1 partial reconstruction · Approved sandbox defaults · Research only',
                     showarrow: false,
-                    font: {{
-                        size: 11,
-                        color: '#64748b',
-                        family: 'Inter, sans-serif',
-                        weight: 'bold'
-                    }}
+                    font: {{ size: 9, color: '#475569', family: 'Inter, sans-serif' }}
                 }}
             ]
         }};
@@ -787,21 +730,22 @@ def generate_symbol_page(symbol, all_symbols, metadata):
         Plotly.newPlot('chart', data, layout, {{responsive: true, displaylogo: false}});
 
         const gd = document.getElementById('chart');
-        gd.on('plotly_hover', function(data) {{
-            const pts = data.points[0];
+        gd.on('plotly_hover', function(eventData) {{
+            const pts = eventData.points[0];
             const idx = pts.pointIndex;
-            const dateStr = pts.x;
-            const priceVal = close[idx];
-            const volVal = volume[idx];
-            const rangeVal = rangePct[idx];
-            const volPctVal = rollingVol[idx];
-            const erVal = er[idx];
-            const fmlcVal = fmlc[idx];
-            const fpVal = flowprint[idx];
-            const rawVal = rawScore[idx];
-            
+            const dateStr  = pts.x;
+            const price    = closeArr[idx];
+            const vol      = volumeArr[idx];
+            const rng      = rangePct[idx];
+            const rvol     = rollingVol[idx];
+            const erVal    = er[idx];
+            const fmlcVal  = fmlc[idx];
+            const fpVal    = flowprint[idx];
+            const rawVal   = rawScore[idx];
+            const fmt = (v, d=4) => (v !== undefined && v !== null) ? (+v).toFixed(d) : 'N/A';
             const readout = document.getElementById('hoverReadout');
-            readout.innerHTML = `[UTC TIME: ${{dateStr}}] // Price: ${{priceVal !== undefined && priceVal !== null ? priceVal.toFixed(4) : 'N/A'}} // Volume: ${{volVal !== undefined && volVal !== null ? volVal.toLocaleString() : 'N/A'}} // Spread: ${{rangeVal !== undefined && rangeVal !== null ? rangeVal.toFixed(4) + '%' : 'N/A'}} // Volatility: ${{volPctVal !== undefined && volPctVal !== null ? volPctVal.toFixed(4) + '%' : 'N/A'}} // ER: ${{erVal !== undefined && erVal !== null ? erVal.toFixed(2) : 'N/A'}} // FMLC: ${{fmlcVal !== undefined && fmlcVal !== null ? fmlcVal.toFixed(2) : 'N/A'}} // Flowprint: ${{fpVal !== undefined && fpVal !== null ? fpVal.toFixed(2) : 'N/A'}} // Raw Score: ${{rawVal !== undefined && rawVal !== null ? rawVal.toFixed(2) : 'N/A'}}`;
+            readout.innerHTML =
+                `[UTC: ${{dateStr}}] &nbsp;|&nbsp; Price: ${{fmt(price)}} &nbsp;|&nbsp; Vol: ${{vol !== undefined && vol !== null ? (+vol).toLocaleString(undefined, {{maximumFractionDigits:2}}) : 'N/A'}} &nbsp;|&nbsp; Range: ${{fmt(rng,3)}}% &nbsp;|&nbsp; RVol: ${{fmt(rvol,3)}}% &nbsp;|&nbsp;&nbsp;<b style="color:#f59e0b">ER: ${{fmt(erVal,2)}}</b> &nbsp;|&nbsp; <b style="color:#ef4444">FMLC: ${{fmt(fmlcVal,2)}}</b> &nbsp;|&nbsp; <b style="color:#10b981">FP: ${{fmt(fpVal,2)}}</b> &nbsp;|&nbsp; <b style="color:#a855f7">Score: ${{fmt(rawVal,2)}}</b>`;
         }});
     </script>
 </body>
