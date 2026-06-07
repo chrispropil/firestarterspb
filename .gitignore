@@ -1,2 +1,3 @@
 .env
 *token*.json
+data/research/binance_top100_excluding_existing_5_1month/
