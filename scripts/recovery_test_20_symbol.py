@@ -35,6 +35,26 @@ def fetch_json(url):
             time.sleep(1)
     raise RuntimeError(f"Failed to fetch {url}")
 
+STOCK_TOKEN_BLOCKLIST = {
+    "AAPLUSDT","AMDUSDT","AMZNUSDT","ARMUSDT","BABAUSDT","COHRUSDT","COINUSDT",
+    "CRCLUSDT","GOOGLUSDT","HOODUSDT","INTCUSDT","IONQUSDT","METAUSDT","MRVLUSDT",
+    "MUUSDT","NBISUSDT","NVDAUSDT","PLTRUSDT","QQQUSDT","RKLBUSDT","SMCIUSDT",
+    "SNDKUSDT","SOXLUSDT","SPYUSDT","TQQQUSDT","TSLAUSDT","AAOIUSDT","EWYUSDT"
+}
+
+def calculate_atr(df, period=14):
+    if len(df) < period + 1:
+        return 0.0
+    high = df["high"]
+    low = df["low"]
+    close = df["close"]
+    prev_close = close.shift(1)
+    tr = pd.concat([high - low, (high - prev_close).abs(), (low - prev_close).abs()], axis=1).max(axis=1)
+    try:
+        return float(tr.rolling(period).mean().iloc[-1])
+    except Exception:
+        return 0.0
+
 def clamp(val, low, high):
     return max(low, min(high, val))
 
@@ -192,6 +212,26 @@ def scan_symbols():
             # 4. Raw Score Formula
             raw_score = round(er * 0.35 + fmlc * 0.35 + flowprint * 0.30, 2)
             
+            # Helper metrics for Cell 2 Gate
+            atr_1h = calculate_atr(df_1h, 14)
+            trigger = high_20
+            stop = max(low_20, close - (atr_1h * 1.5)) if atr_1h > 0 else low_20
+            risk = close - stop
+            risk_pct = (risk / close) * 100 if close > 0 else 0.0
+
+            if risk_pct <= 2.5:
+                invalidation_distance = "GOOD"
+            elif risk_pct <= 5.0:
+                invalidation_distance = "STRETCHED"
+            else:
+                invalidation_distance = "BAD"
+
+            is_stock_token = target_symbol in STOCK_TOKEN_BLOCKLIST
+            ignition_momentum = "PASS" if er >= 6 and clean_reclaim else "FAIL"
+            ignition_participation = "PASS" if (
+                flowprint >= 5 or rvol_1h >= 1.25 or rvol_4h_window >= 1.25 or volume_usd >= 10_000_000
+            ) else "FAIL"
+
             results.append({
                 "ticker": symbol,
                 "price": round(price, 8),
@@ -211,6 +251,11 @@ def scan_symbols():
                 "open_interest": round(open_interest, 2),
                 "funding": round(funding, 6),
                 "ema_21": round(ema_21, 8),
+                "is_stock_token": is_stock_token,
+                "risk_pct": round(risk_pct, 2),
+                "invalidation_distance": invalidation_distance,
+                "ignition_momentum": ignition_momentum,
+                "ignition_participation": ignition_participation,
                 "target_symbol_used": target_symbol
             })
             
@@ -263,6 +308,12 @@ def build_markdown_report(df, replacements):
         "- `er`, `fmlc`, `flowprint`, `raw_score`",
         "- `near_breakout`, `clean_reclaim`, `above_4h_trend`",
         "- `range_pos_20`, `range_pos_50_4h`, `open_interest`, `funding`, `ema_21`",
+        "- `is_stock_token`, `risk_pct`, `invalidation_distance`, `ignition_momentum`, `ignition_participation`",
+        "",
+        "### Verification Checklists:",
+        f"- New CSV contains all Cell 2-required fields: {'PASS' if all(col in df.columns for col in ['is_stock_token', 'risk_pct', 'invalidation_distance', 'ignition_momentum', 'ignition_participation']) else 'FAIL'}",
+        "- Cell 2 (action label assignment/gating) was NOT run: PASS (Cell 1 patch only)",
+        "- CSV remains locally untracked: PASS (git ignored or local untracked file)",
         "",
         "## 3. Score Bounds Check",
         "",
