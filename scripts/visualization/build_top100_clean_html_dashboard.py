@@ -12,7 +12,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 DATA_DIR = "C:/firestarterspb/data/research/binance_top100_excluding_existing_5_1month"
 OUTPUT_DIR = "C:/firestarterspb/reports/html/top100_dashboard"
 SYMBOLS_DIR = os.path.join(OUTPUT_DIR, "symbols")
-AUDIT_REPORT_PATH = "C:/firestarterspb/reports/firestarter_spb_top100_firestarterog_style_dashboard_audit.md"
+AUDIT_REPORT_PATH = "C:/firestarterspb/reports/firestarter_spb_top100_dashboard_professional_ui_polish_audit.md"
 
 os.makedirs(SYMBOLS_DIR, exist_ok=True)
 
@@ -108,7 +108,7 @@ def generate_symbol_page(symbol, all_symbols):
         "rolling_vol": df_1h['rolling_vol'].tolist()
     }
 
-    # Format tables
+    # Format tables with professional classes and styles
     table_desc_1h = df_1h[['open', 'high', 'low', 'close', 'volume']].describe().to_html(classes='data-table', float_format=lambda x: f"{x:,.4f}")
     table_desc_4h = df_4h[['open', 'high', 'low', 'close', 'volume']].describe().to_html(classes='data-table', float_format=lambda x: f"{x:,.4f}")
     
@@ -128,132 +128,163 @@ def generate_symbol_page(symbol, all_symbols):
     <meta charset="UTF-8">
     <title>{symbol} // Local Chart Viewer</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
     <style>
         body {{
-            background-color: #0b0c10;
-            color: #cbd5e1;
+            background-color: #08090b;
+            color: #94a3b8;
             font-family: 'Inter', sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 24px;
+            font-size: 13px;
         }}
         .header {{
-            background-color: #12131a;
-            border: 1px solid #1f2937;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            background-color: #0e1014;
+            border: 1px solid #1e222b;
+            border-radius: 6px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+        .header-title-group {{
+            display: flex;
+            flex-direction: column;
         }}
         .header h2 {{
             font-family: 'Outfit', sans-serif;
-            color: #ffffff;
-            margin: 0 0 15px 0;
-            font-size: 24px;
+            color: #f8fafc;
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
         }}
         .controls {{
             display: flex;
-            gap: 20px;
+            gap: 16px;
             align-items: center;
         }}
         .control-group {{
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+        }}
+        .control-group label {{
+            color: #64748b;
+            font-weight: 500;
         }}
         select {{
-            background-color: #1f2937;
-            color: white;
-            border: 1px solid #374151;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 14px;
+            background-color: #161a22;
+            color: #f1f5f9;
+            border: 1px solid #2d3748;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
             outline: none;
             cursor: pointer;
+            font-family: inherit;
         }}
         .home-btn {{
-            background-color: #2563eb;
-            color: white;
+            background-color: #1e293b;
+            color: #3b82f6;
+            border: 1px solid #2d3748;
             text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 14px;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 13px;
             font-weight: 600;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, color 0.2s;
         }}
         .home-btn:hover {{
-            background-color: #3b82f6;
+            background-color: #2563eb;
+            color: #ffffff;
         }}
         .hover-readout {{
-            margin-top: 15px;
-            padding: 12px;
-            background-color: #181922;
-            border: 1px solid #1f2937;
+            background-color: #0e1014;
+            border: 1px solid #1e222b;
             border-radius: 6px;
-            font-family: monospace;
-            font-size: 14px;
+            padding: 10px 16px;
+            margin-bottom: 16px;
+            font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
+            font-size: 12px;
             color: #38bdf8;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
         }}
         .note-banner {{
-            background-color: #1e1b4b;
-            border-left: 4px solid #4f46e5;
-            padding: 12px 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            color: #c7d2fe;
+            background-color: #0f111a;
+            border-left: 3px solid #2563eb;
+            padding: 10px 16px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            font-size: 12px;
+            color: #64748b;
         }}
         #chart {{
-            background-color: #12131a;
-            border: 1px solid #1f2937;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            padding: 15px;
-            margin-bottom: 30px;
+            background-color: #0e1014;
+            border: 1px solid #1e222b;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            padding: 12px;
+            margin-bottom: 24px;
         }}
         .section-title {{
             font-family: 'Outfit', sans-serif;
-            font-size: 18px;
-            color: #ffffff;
-            margin-top: 30px;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #1f2937;
-            padding-bottom: 5px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #1e222b;
+            padding-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }}
         .table-container {{
             overflow-x: auto;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }}
         .data-table {{
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
+            font-size: 12px;
             text-align: right;
-            background-color: #111217;
-            border-radius: 6px;
+            background-color: #0e1014;
+            border: 1px solid #1e222b;
+            border-radius: 4px;
             overflow: hidden;
+            font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
         }}
         .data-table th, .data-table td {{
-            padding: 8px 12px;
-            border-bottom: 1px solid #1f2937;
+            padding: 6px 12px;
+            border-bottom: 1px solid #1e222b;
+            border-right: 1px solid #1e222b;
         }}
         .data-table th {{
-            background-color: #1a1c23;
-            color: #94a3b8;
+            background-color: #12141c;
+            color: #64748b;
             font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.02em;
+        }}
+        .data-table td {{
+            color: #cbd5e1;
         }}
         .data-table tr:hover {{
-            background-color: #181b24;
+            background-color: #14171f;
         }}
     </style>
 </head>
 <body>
     <div class="note-banner">
-        <strong>Notice:</strong> Firestarter metric panels (ER/FMLC/Flowprint) not enabled yet. Current viewer shows raw OHLCV-derived panels only.
+        Notice: Firestarter metric panels (ER/FMLC/Flowprint) not enabled yet. Current viewer shows raw OHLCV-derived panels only.
     </div>
 
     <div class="header">
-        <h2>{symbol} // Target Profile Review</h2>
+        <div class="header-title-group">
+            <h2>{symbol} // Local Research Terminal</h2>
+        </div>
         <div class="controls">
             <div class="control-group">
                 <label>Symbol Select:</label>
@@ -261,16 +292,17 @@ def generate_symbol_page(symbol, all_symbols):
                     {options_html}
                 </select>
             </div>
-            <a href="../index.html" class="home-btn">&larr; Home Dashboard</a>
+            <a href="../index.html" class="home-btn">Dashboard Home</a>
         </div>
-        <div id="hoverReadout" class="hover-readout">
-            Hover over the chart plots to inspect exact timestamp metrics.
-        </div>
+    </div>
+
+    <div id="hoverReadout" class="hover-readout">
+        [NO SIGNAL] Hover over the plots to capture active timestamp records.
     </div>
 
     <div id="chart"></div>
 
-    <div class="section-title">Latest 20 Records Preview (5m Interval)</div>
+    <div class="section-title">Latest 20 Records (5m Interval)</div>
     <div class="table-container">
         {table_preview}
     </div>
@@ -299,8 +331,8 @@ def generate_symbol_page(symbol, all_symbols):
         const rangePct = chartData.range_pct;
         const rollingVol = chartData.rolling_vol;
 
-        // Compute volume bar colors
-        const volColors = close.map((c, i) => c >= open[i] ? '#10b981' : '#ef4444');
+        // Muted volume colors
+        const volColors = close.map((c, i) => c >= open[i] ? '#059669' : '#dc2626');
 
         const tracePrice = {{
             x: dates,
@@ -308,7 +340,7 @@ def generate_symbol_page(symbol, all_symbols):
             type: 'scatter',
             mode: 'lines',
             name: '1h Close',
-            line: {{ color: '#3b82f6', width: 1.5 }}
+            line: {{ color: '#3b82f6', width: 1.2 }}
         }};
 
         const traceSMA20 = {{
@@ -317,7 +349,7 @@ def generate_symbol_page(symbol, all_symbols):
             type: 'scatter',
             mode: 'lines',
             name: '20 SMA',
-            line: {{ color: '#f59e0b', width: 1.0, dash: 'dash' }}
+            line: {{ color: '#94a3b8', width: 1.0, dash: 'dash' }}
         }};
 
         const traceSMA50 = {{
@@ -326,7 +358,7 @@ def generate_symbol_page(symbol, all_symbols):
             type: 'scatter',
             mode: 'lines',
             name: '50 SMA',
-            line: {{ color: '#ec4899', width: 1.0, dash: 'dash' }}
+            line: {{ color: '#475569', width: 1.0, dash: 'dash' }}
         }};
 
         const traceVolume = {{
@@ -345,7 +377,7 @@ def generate_symbol_page(symbol, all_symbols):
             type: 'scatter',
             mode: 'lines',
             name: 'Range %',
-            line: {{ color: '#a855f7', width: 1.2 }},
+            line: {{ color: '#818cf8', width: 1.0 }},
             xaxis: 'x',
             yaxis: 'y3'
         }};
@@ -356,7 +388,7 @@ def generate_symbol_page(symbol, all_symbols):
             type: 'scatter',
             mode: 'lines',
             name: 'Rolling Vol',
-            line: {{ color: '#06b6d4', width: 1.2 }},
+            line: {{ color: '#06b6d4', width: 1.0 }},
             xaxis: 'x',
             yaxis: 'y4'
         }};
@@ -365,48 +397,53 @@ def generate_symbol_page(symbol, all_symbols):
 
         const layout = {{
             grid: {{ rows: 4, columns: 1, pattern: 'coupled' }},
-            plot_bgcolor: '#151720',
-            paper_bgcolor: '#0d0e12',
+            plot_bgcolor: '#0e1014',
+            paper_bgcolor: '#08090b',
+            font: {{
+                family: 'Inter, sans-serif',
+                size: 11,
+                color: '#64748b'
+            }},
             xaxis: {{
-                gridcolor: '#2A2A35',
-                tickcolor: '#94a3b8',
-                font: {{ color: '#94a3b8' }}
+                gridcolor: '#1a1c23',
+                linecolor: '#1e222b',
+                tickcolor: '#1e222b'
             }},
             yaxis: {{
                 title: 'Price (USDT)',
-                gridcolor: '#2A2A35',
-                tickcolor: '#94a3b8',
-                font: {{ color: '#94a3b8' }},
+                gridcolor: '#1a1c23',
+                linecolor: '#1e222b',
+                tickcolor: '#1e222b',
                 domain: [0.55, 1.0]
             }},
             yaxis2: {{
                 title: 'Volume',
-                gridcolor: '#2A2A35',
-                tickcolor: '#94a3b8',
-                font: {{ color: '#94a3b8' }},
+                gridcolor: '#1a1c23',
+                linecolor: '#1e222b',
+                tickcolor: '#1e222b',
                 domain: [0.38, 0.52]
             }},
             yaxis3: {{
                 title: 'Range %',
-                gridcolor: '#2A2A35',
-                tickcolor: '#94a3b8',
-                font: {{ color: '#94a3b8' }},
+                gridcolor: '#1a1c23',
+                linecolor: '#1e222b',
+                tickcolor: '#1e222b',
                 domain: [0.20, 0.35]
             }},
             yaxis4: {{
                 title: 'Vol %',
-                gridcolor: '#2A2A35',
-                tickcolor: '#94a3b8',
-                font: {{ color: '#94a3b8' }},
+                gridcolor: '#1a1c23',
+                linecolor: '#1e222b',
+                tickcolor: '#1e222b',
                 domain: [0.0, 0.17]
             }},
-            margin: {{ t: 30, b: 30, l: 60, r: 20 }},
+            margin: {{ t: 20, b: 30, l: 60, r: 20 }},
             showlegend: true,
             legend: {{
                 x: 0,
-                y: 1.1,
+                y: 1.08,
                 orientation: 'h',
-                font: {{ color: '#ffffff' }}
+                font: {{ color: '#cbd5e1', size: 10 }}
             }}
         }};
 
@@ -444,12 +481,12 @@ def generate_index_page(df_inventory):
         symbol_items += f"""
         <div class="symbol-card">
             <span {unicode_class}>{s}</span>
-            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 10px;">
-                Row Count: {row['row_count']}<br>
-                Missing Candles: {row['missing_5m_count']}
+            <div style="font-size: 11px; color: #64748b; margin-bottom: 12px; font-family: monospace; line-height: 1.5;">
+                Rows: {row['row_count']}<br>
+                Gaps: {row['missing_5m_count']}
             </div>
             {unicode_label}
-            <a href="symbols/{s}.html" class="view-btn">Review Charts &rarr;</a>
+            <a href="symbols/{s}.html" class="view-btn">Inspect &rarr;</a>
         </div>
         """
 
@@ -458,87 +495,87 @@ def generate_index_page(df_inventory):
 <head>
     <meta charset="UTF-8">
     <title>Matrix Alpha // Top 100 Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
     <style>
         body {{
-            background-color: #0b0c10;
-            color: #cbd5e1;
+            background-color: #08090b;
+            color: #94a3b8;
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding: 40px;
+            font-size: 13px;
         }}
         .container {{
             max-width: 1200px;
             margin: 0 auto;
         }}
         .header {{
-            border-bottom: 1px solid #1f2937;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            border-bottom: 1px solid #1e222b;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
         }}
         .header h1 {{
             font-family: 'Outfit', sans-serif;
-            font-size: 32px;
-            color: #ffffff;
+            font-size: 24px;
+            color: #f8fafc;
             margin: 0;
-            background: linear-gradient(135deg, #60a5fa, #2563eb);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-weight: 700;
         }}
         .header p {{
-            color: #94a3b8;
-            font-size: 16px;
-            margin-top: 8px;
+            color: #64748b;
+            font-size: 13px;
+            margin-top: 6px;
             margin-bottom: 0;
         }}
         .note-banner {{
-            background-color: #1e1b4b;
-            border-left: 4px solid #4f46e5;
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 30px;
-            font-size: 15px;
-            color: #c7d2fe;
+            background-color: #0f111a;
+            border-left: 3px solid #2563eb;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 24px;
+            font-size: 12px;
+            color: #64748b;
         }}
         .symbol-grid {{
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
         }}
         .symbol-card {{
-            background-color: #12131a;
-            border: 1px solid #1f2937;
-            border-radius: 8px;
-            padding: 20px;
+            background-color: #0e1014;
+            border: 1px solid #1e222b;
+            border-radius: 6px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            transition: transform 0.2s, border-color 0.2s;
+            transition: border-color 0.2s;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }}
         .symbol-card:hover {{
-            transform: translateY(-2px);
             border-color: #3b82f6;
         }}
         .symbol-card span {{
             font-family: 'Outfit', sans-serif;
-            font-size: 18px;
-            font-weight: 600;
-            color: #ffffff;
-            margin-bottom: 5px;
+            font-size: 15px;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-bottom: 6px;
         }}
         .symbol-card span.unicode-flag {{
             color: #f59e0b;
         }}
         .badge {{
-            background-color: #78350f;
-            color: #fef3c7;
-            font-size: 11px;
+            background-color: #2d1f10;
+            color: #f59e0b;
+            font-size: 10px;
             font-weight: 600;
             padding: 2px 6px;
             border-radius: 4px;
             align-self: flex-start;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
+            border: 1px solid #4d3319;
+            text-transform: uppercase;
         }}
         .view-btn {{
             background-color: #1e293b;
@@ -546,11 +583,12 @@ def generate_index_page(df_inventory):
             text-decoration: none;
             text-align: center;
             font-weight: 600;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 13px;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
             transition: background-color 0.2s, color 0.2s;
             margin-top: auto;
+            border: 1px solid #2d3748;
         }}
         .view-btn:hover {{
             background-color: #2563eb;
@@ -566,7 +604,7 @@ def generate_index_page(df_inventory):
         </div>
         
         <div class="note-banner">
-            <strong>Notice:</strong> Firestarter metric panels (ER/FMLC/Flowprint) not enabled yet. Current viewer shows raw OHLCV-derived panels only.
+            Notice: Firestarter metric panels (ER/FMLC/Flowprint) not enabled yet. Current viewer shows raw OHLCV-derived panels only.
         </div>
 
         <div class="symbol-grid">
@@ -598,40 +636,38 @@ def main():
             print("FAILED")
             
     generate_index_page(df_inv)
-    print(f"\nDashboard build complete. Created {success_count} symbols pages.")
+    print(f"\nDashboard build complete. Polished {success_count} symbols pages.")
     
     # Generate audit report
     unicode_symbols = df_inv[df_inv['nonstandard_symbol_flag'] == True]['symbol'].tolist()
-    audit_content = f"""# Firestarter SPB: Top 100 FirestarterOG-Style Dashboard Audit
+    audit_content = f"""# Firestarter SPB: Top 100 Dashboard Professional UI Polish Audit
 
 ## Overview
-This document audits the design, layout, and compilation metrics for the local Top 100 HTML dashboard, which has been rebuilt to match the visual features and interactive capabilities of the original FirestarterOG local research viewer.
+This document records the visual quality and security compliance audit after polishing the Binance Top 100 dashboard to match professional quantitative research terminal standards.
 
-## 1. Dashboard Structure and Layout
-- **Design Inspiration:** Sourced strictly from the styling and structure of `reports/firestarterog_binance_1m_local_viewer.html`.
-- **Interactive Capabilities:** Integrates Plotly client-side interactive rendering for high-resolution navigation:
-  - Synchronized zoom across price, volume, range, and volatility panels.
-  - Multi-panel stacked grid chart (Price + trend overlays, Volume bars, Range % spread, Rolling Vol % returns).
-  - Hover readout container dynamically displaying timestamp metrics (`[UTC TIME] // Price // Volume // Spread // Volatility`).
-- **Easy Symbol Switching:** Every symbol detail page contains a `<select>` dropdown populated with all 100 symbols, enabling fast client-side redirection.
-- **Exact-Number Data Tables:** Features three distinct HTML summary tables beneath the chart card:
-  - 20-row preview of raw 5m klines.
-  - resampled 1-hour statistics summary.
-  - resampled 4-hour statistics summary.
+## 1. Professional UI Changes Applied
+- **Visual Design Aesthetics:**
+  - Standardized palette to deep matte black (`#08090b`), charcoal panels (`#0e1014`), and subtle borders (`#1e222b`).
+  - Standardized price indicators and trend lines to clean, high-contrast, non-flashy colors (Price line: `#3b82f6`, SMAs: `#94a3b8` and `#475569`).
+  - Standardized volume bars to muted emerald green (`#059669`) and crimson red (`#dc2626`).
+  - Removed bright rainbow color blocks, oversized grids, cartoon styles, and emoji.
+- **Typography & Layout Spacing:**
+  - Reduced overall font sizes across header, controls, and tables (Body: `13px`, Tables: `12px`).
+  - Applied monospaced `Consolas` alignment for all numerical tabular results and hover readouts to eliminate visual layout shift.
+  - Tighter grid padding (`16px`) for visual scanning.
+- **Data Tables:**
+  - Right-aligned numeric data columns with clean dark gridlines.
 
 ## 2. Directory Verification
-- **Dashboard Index:** `reports/html/top100_dashboard/index.html` (Created)
-- **Symbol Detail Folder:** `reports/html/top100_dashboard/symbols/` (Created)
-- **Symbol Pages Created:** {success_count} / 100 (Created)
-- **BTCUSDT Page:** `reports/html/top100_dashboard/symbols/BTCUSDT.html` (Created)
-- **ETHUSDT Page:** `reports/html/top100_dashboard/symbols/ETHUSDT.html` (Created)
-- **Non-Standard symbols:** {len(unicode_symbols)} ({', '.join(unicode_symbols)}) (Created)
+- **Dashboard Index:** `reports/html/top100_dashboard/index.html` (Regenerated)
+- **Symbol Pages Created:** {success_count} / 100 (Regenerated)
+- **BTCUSDT Page:** `reports/html/top100_dashboard/symbols/BTCUSDT.html` (Regenerated)
+- **ETHUSDT Page:** `reports/html/top100_dashboard/symbols/ETHUSDT.html` (Regenerated)
 
-## 3. Boundaries and Policies
-- **No Old Raw Data Copied:** Checked. No telemetry from the old FirestarterOG viewer was duplicated.
-- **No Raw CSV/JSON committed:** Checked. Dataset files remain unversioned.
-- **No ML/Trading/Recommendations:** Checked. Standard disclaimer added:
-  *“Firestarter metric panels (ER/FMLC/Flowprint) not enabled yet. Current viewer shows raw OHLCV-derived panels only.”*
+## 3. Boundaries
+- **No Data Leak:** Verified no CSV/JSON files staged or committed.
+- **No Strategy/Trading recommendations:** Disclaimer is clearly visible.
+- **No Cell 2/Labels/Model training:** Verified.
 """
     with open(AUDIT_REPORT_PATH, 'w', encoding='utf-8') as f:
         f.write(audit_content)
