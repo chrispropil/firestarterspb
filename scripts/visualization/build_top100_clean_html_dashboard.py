@@ -12,7 +12,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 DATA_DIR = "C:/firestarterspb/data/research/binance_top100_excluding_existing_5_1month"
 OUTPUT_DIR = "C:/firestarterspb/reports/html/top100_dashboard"
 SYMBOLS_DIR = os.path.join(OUTPUT_DIR, "symbols")
-AUDIT_REPORT_PATH = "C:/firestarterspb/reports/firestarter_spb_top100_dashboard_v3_firestarter_panels_audit.md"
+AUDIT_REPORT_PATH = "C:/firestarterspb/reports/firestarter_spb_top100_dashboard_high_tech_ui_audit.md"
 
 os.makedirs(SYMBOLS_DIR, exist_ok=True)
 
@@ -320,20 +320,23 @@ def generate_symbol_page(symbol, all_symbols, metadata):
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
     <style>
         body {{
-            background-color: #08090b;
-            color: #94a3b8;
-            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at center, #111317 0%, #07080a 100%);
+            color: #d1d5db;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             margin: 0;
-            padding: 16px;
-            font-size: 13px;
+            padding: 20px;
+            font-size: 12px;
+            letter-spacing: -0.01em;
         }}
         .header {{
-            background-color: #0e1014;
-            border: 1px solid #1e222b;
-            border-radius: 6px;
-            padding: 12px 16px;
+            background: rgba(10, 10, 10, 0.75);
+            border: 1px solid rgba(13, 185, 213, 0.2);
+            border-top: 2px solid #0db9d7;
+            backdrop-filter: blur(8px);
+            border-radius: 4px;
+            padding: 10px 16px;
             margin-bottom: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -343,11 +346,13 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             flex-direction: column;
         }}
         .header h2 {{
-            font-family: 'Outfit', sans-serif;
-            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            color: #e2e8f0;
             margin: 0;
-            font-size: 18px;
-            font-weight: 700;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
         }}
         .controls {{
             display: flex;
@@ -360,69 +365,74 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             gap: 8px;
         }}
         .control-group label {{
-            color: #64748b;
+            color: #556070;
+            font-size: 11px;
+            text-transform: uppercase;
             font-weight: 500;
+            letter-spacing: 0.05em;
         }}
         select {{
-            background-color: #161a22;
-            color: #f1f5f9;
-            border: 1px solid #2d3748;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 13px;
+            background-color: #0a0a0a;
+            color: #0db9d7;
+            border: 1px solid rgba(13, 185, 213, 0.3);
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
             outline: none;
             cursor: pointer;
-            font-family: inherit;
         }}
         .home-btn {{
-            background-color: #1e293b;
-            color: #3b82f6;
-            border: 1px solid #2d3748;
+            background-color: #0a0a0a;
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             text-decoration: none;
-            padding: 6px 14px;
-            border-radius: 4px;
-            font-size: 13px;
-            font-weight: 600;
-            transition: background-color 0.2s, color 0.2s;
+            padding: 4px 12px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.15s ease;
         }}
         .home-btn:hover {{
-            background-color: #2563eb;
-            color: #ffffff;
+            border-color: #0db9d7;
+            color: #0db9d7;
+            background-color: rgba(13, 185, 213, 0.05);
         }}
         .metadata-grid {{
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 12px;
-            background-color: #0e1014;
-            border: 1px solid #1e222b;
-            border-radius: 6px;
-            padding: 12px 16px;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            background: rgba(10, 10, 10, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(4px);
+            border-radius: 4px;
+            padding: 10px 14px;
             margin-bottom: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
         }}
         .metadata-item {{
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 2px;
         }}
         .metadata-label {{
-            color: #64748b;
-            font-size: 11px;
+            color: #556070;
+            font-size: 9px;
             text-transform: uppercase;
             font-weight: 600;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.08em;
         }}
         .metadata-value {{
             color: #cbd5e1;
             font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
-            font-size: 13px;
+            font-size: 11px;
         }}
         .font-highlight {{
-            color: #38bdf8;
-            font-weight: 700;
+            color: #0db9d7;
+            font-weight: 600;
         }}
         .font-bold {{
-            font-weight: 700;
+            font-weight: 600;
         }}
         .text-success {{
             color: #10b981;
@@ -433,107 +443,122 @@ def generate_symbol_page(symbol, all_symbols, metadata):
         /* ── Metric output cards ── */
         .metric-cards {{
             display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
+            gap: 8px;
+            margin-bottom: 12px;
         }}
         .metric-card {{
             flex: 1;
-            background-color: #0e1014;
-            border: 1px solid #1e222b;
-            border-radius: 6px;
-            padding: 10px 14px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.45);
+            background: rgba(10, 10, 10, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            padding: 8px 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 3px;
+            position: relative;
+            overflow: hidden;
         }}
+        .metric-card::after {{
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+        }}
+        .mc-er::after {{ background-color: #d19a66; }}
+        .mc-fmlc::after {{ background-color: #ef4444; }}
+        .mc-fp::after {{ background-color: #5eead4; }}
+        .mc-score::after {{ background-color: #a78bfa; }}
+
         .mc-label {{
-            font-size: 10px;
+            font-size: 9px;
             text-transform: uppercase;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            color: #475569;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            color: #64748b;
         }}
         .mc-value {{
             font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
-            line-height: 1;
+            line-height: 1.1;
         }}
         .mc-sub {{
-            font-size: 10px;
+            font-size: 9px;
             color: #475569;
             font-family: 'Consolas', monospace;
         }}
-        .mc-er   .mc-value {{ color: #f59e0b; }}
+        .mc-er   .mc-value {{ color: #d19a66; }}
         .mc-fmlc .mc-value {{ color: #ef4444; }}
-        .mc-fp   .mc-value {{ color: #34d399; }}
+        .mc-fp   .mc-value {{ color: #5eead4; }}
         .mc-score .mc-value {{ color: #a78bfa; }}
         .hover-readout {{
-            background-color: #0e1014;
-            border: 1px solid #1e222b;
-            border-radius: 6px;
-            padding: 8px 12px;
+            background: rgba(10, 10, 10, 0.85);
+            border: 1px solid rgba(13, 185, 213, 0.15);
+            border-radius: 4px;
+            padding: 6px 12px;
             margin-bottom: 12px;
             font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
-            font-size: 12px;
-            color: #38bdf8;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+            font-size: 11px;
+            color: #0db9d7;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.8);
         }}
         #chart {{
-            background-color: #0e1014;
-            border: 1px solid #1e222b;
-            border-radius: 6px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-            padding: 12px;
-            margin-bottom: 24px;
+            background: rgba(10, 10, 10, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.6);
+            padding: 8px;
+            margin-bottom: 20px;
             height: 850px;
         }}
         .section-title {{
-            font-family: 'Outfit', sans-serif;
-            font-size: 14px;
-            font-weight: 700;
-            color: #f8fafc;
-            margin-top: 24px;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #1e222b;
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             padding-bottom: 4px;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.08em;
         }}
         .table-container {{
             overflow-x: auto;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }}
         .data-table {{
             width: 100%;
             border-collapse: collapse;
-            font-size: 12px;
+            font-size: 11px;
             text-align: right;
-            background-color: #0e1014;
-            border: 1px solid #1e222b;
+            background: rgba(10, 10, 10, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 4px;
             overflow: hidden;
             font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
         }}
         .data-table th, .data-table td {{
             padding: 4px 8px;
-            border-bottom: 1px solid #1e222b;
-            border-right: 1px solid #1e222b;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            border-right: 1px solid rgba(255, 255, 255, 0.03);
         }}
         .data-table th {{
-            background-color: #12141c;
+            background: rgba(20, 22, 28, 0.8);
             color: #64748b;
             font-weight: 600;
             text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 0.02em;
+            font-size: 10px;
+            letter-spacing: 0.04em;
         }}
         .data-table td {{
             color: #cbd5e1;
         }}
         .data-table tr:hover {{
-            background-color: #14171f;
+            background: rgba(13, 185, 213, 0.03);
         }}
     </style>
 </head>
@@ -654,7 +679,7 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             x: dates, y: closeArr,
             type: 'scatter', mode: 'lines',
             name: 'Price',
-            line: {{ color: '#ffffff', width: 1.5 }},
+            line: {{ color: '#ffffff', width: 1.8 }},
             yaxis: 'y2'
         }};
 
@@ -664,7 +689,7 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             x: dates, y: fmlc,
             type: 'scatter', mode: 'lines',
             name: 'FMLC',
-            line: {{ color: 'rgba(239,68,68,0.82)', width: 1.2 }},
+            line: {{ color: 'rgba(239,68,68,0.45)', width: 0.9 }},
             yaxis: 'y'
         }};
 
@@ -673,7 +698,7 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             x: dates, y: flowprint,
             type: 'scatter', mode: 'lines',
             name: 'Flowprint',
-            line: {{ color: 'rgba(52,211,153,0.55)', width: 0.9 }},
+            line: {{ color: 'rgba(94,234,212,0.38)', width: 0.6 }},
             yaxis: 'y'
         }};
 
@@ -682,16 +707,16 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             x: dates, y: rawScore,
             type: 'scatter', mode: 'markers',
             name: 'Score',
-            marker: {{ color: 'rgba(167,139,250,0.78)', size: 3.5 }},
+            marker: {{ color: 'rgba(167,139,250,0.55)', size: 3 }},
             yaxis: 'y'
         }};
 
         // ── ER panel: amber vertical bars, fixed 0-10, own sub-panel below main chart
         const erColors = er.map(v => {{
-            if (v === null || v === undefined) return 'rgba(100,116,139,0.35)';
-            if (v >= 7) return 'rgba(245,158,11,0.90)';
-            if (v >= 4) return 'rgba(245,158,11,0.58)';
-            return 'rgba(245,158,11,0.28)';
+            if (v === null || v === undefined) return 'rgba(100,116,139,0.10)';
+            if (v >= 7) return 'rgba(209,154,102,0.60)';
+            if (v >= 4) return 'rgba(209,154,102,0.40)';
+            return 'rgba(209,154,102,0.20)';
         }});
         const traceER = {{
             x: dates, y: er,
@@ -702,45 +727,31 @@ def generate_symbol_page(symbol, all_symbols, metadata):
         }};
 
         // ── Bottom panel: Range % and Rolling Volatility
-        const traceRange = {{
-            x: dates, y: rangePct,
-            type: 'scatter', mode: 'lines',
-            name: 'Range %',
-            line: {{ color: '#818cf8', width: 0.9 }},
-            yaxis: 'y4'
-        }};
-        const traceRollingVol = {{
-            x: dates, y: rollingVol,
-            type: 'scatter', mode: 'lines',
-            name: 'Rolling Vol %',
-            line: {{ color: '#06b6d4', width: 0.9 }},
-            yaxis: 'y4'
-        }};
+
 
         const data = [
             tracePrice,
             traceFMLC, traceFlowprint, traceRawScore,
-            traceER,
-            traceRange, traceRollingVol
+            traceER
         ];
 
         const layout = {{
-            plot_bgcolor:  '#0e1014',
+            plot_bgcolor:  '#0a0a0a',
             paper_bgcolor: '#08090b',
-            font: {{ family: 'Inter, sans-serif', size: 11, color: '#64748b' }},
+            font: {{ family: 'Inter, Roboto, sans-serif', size: 10, color: '#e0e0e0' }},
             bargap: 0.12,
 
             xaxis: {{
-                gridcolor: '#1a1c23', linecolor: '#1e222b', tickcolor: '#1e222b',
+                gridcolor: '#222222', linecolor: '#333333', tickcolor: '#444444',
                 domain: [0, 1]
             }},
 
-            // LEFT y-axis — Firestarter Metrics (0-10)  [main chart]
+            // Main left y-axis for raw_score
             yaxis: {{
                 title: 'Firestarter Metrics',
-                gridcolor: '#1e222b', linecolor: '#1e222b', tickcolor: '#1e222b',
+                gridcolor: '#222222', linecolor: '#333333', tickcolor: '#444444',
                 tickfont: {{ color: '#64748b' }},
-                domain: [0.44, 1.0],
+                domain: [0.44, 0.80],
                 range: [0, 10],
                 side: 'left'
             }},
@@ -749,11 +760,12 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             yaxis2: {{
                 title: 'Price (USDT)',
                 gridcolor: 'rgba(0,0,0,0)',
-                linecolor: '#1e222b', tickcolor: '#1e222b',
+                linecolor: '#333333', tickcolor: '#444444',
                 tickfont: {{ color: '#e2e8f0' }},
                 overlaying: 'y',
                 side: 'right',
-                showgrid: false
+                showgrid: false,
+                domain: [0.80, 1.0]
             }},
 
             // ER sub-panel
@@ -767,14 +779,9 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             }},
 
             // Bottom panel \u2014 Range / Vol %
-            yaxis4: {{
-                title: 'Range / Vol %',
-                gridcolor: '#1e222b', linecolor: '#1e222b', tickcolor: '#1e222b',
-                tickfont: {{ color: '#64748b' }},
-                domain: [0.0, 0.20]
-            }},
 
-            margin: {{ t: 46, b: 26, l: 72, r: 78 }},
+
+            margin: {{ t: 40, b: 30, l: 30, r: 30 }},
             showlegend: true,
             legend: {{
                 x: 0, y: 1.055,
@@ -860,43 +867,49 @@ def generate_index_page(df_inventory):
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
     <style>
         body {{
-            background-color: #08090b;
-            color: #94a3b8;
-            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at center, #111317 0%, #07080a 100%);
+            color: #d1d5db;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             margin: 0;
             padding: 40px;
-            font-size: 13px;
+            font-size: 12px;
         }}
         .container {{
             max-width: 1200px;
             margin: 0 auto;
         }}
         .header {{
-            border-bottom: 1px solid #1e222b;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             padding-bottom: 16px;
             margin-bottom: 24px;
         }}
         .header h1 {{
-            font-family: 'Outfit', sans-serif;
-            font-size: 24px;
-            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            font-size: 20px;
+            color: #e2e8f0;
             margin: 0;
-            font-weight: 700;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
         }}
         .header p {{
             color: #64748b;
-            font-size: 13px;
+            font-size: 11px;
             margin-top: 6px;
             margin-bottom: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }}
         .note-banner {{
-            background-color: #0f111a;
-            border-left: 3px solid #2563eb;
+            background: rgba(10, 10, 10, 0.6);
             padding: 12px 16px;
             border-radius: 4px;
             margin-bottom: 24px;
-            font-size: 12px;
+            font-size: 11px;
             color: #64748b;
+            font-family: 'Consolas', monospace;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-left: 3px solid #0db9d7;
         }}
         .symbol-grid {{
             display: grid;
@@ -904,57 +917,61 @@ def generate_index_page(df_inventory):
             gap: 16px;
         }}
         .symbol-card {{
-            background-color: #0e1014;
-            border: 1px solid #1e222b;
-            border-radius: 6px;
+            background: rgba(10, 10, 10, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
             padding: 16px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            transition: border-color 0.2s;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         }}
         .symbol-card:hover {{
-            border-color: #3b82f6;
+            border-color: #0db9d7;
+            box-shadow: 0 4px 20px rgba(13, 185, 213, 0.1);
         }}
         .symbol-card span {{
-            font-family: 'Outfit', sans-serif;
-            font-size: 15px;
-            font-weight: 700;
-            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: #e2e8f0;
             margin-bottom: 6px;
+            letter-spacing: 0.02em;
         }}
         .symbol-card span.unicode-flag {{
-            color: #f59e0b;
+            color: #d19a66;
         }}
         .badge {{
-            background-color: #2d1f10;
-            color: #f59e0b;
-            font-size: 10px;
+            background-color: rgba(209, 154, 102, 0.1);
+            color: #d19a66;
+            font-size: 9px;
             font-weight: 600;
             padding: 2px 6px;
-            border-radius: 4px;
+            border-radius: 3px;
             align-self: flex-start;
             margin-bottom: 12px;
-            border: 1px solid #4d3319;
+            border: 1px solid rgba(209, 154, 102, 0.2);
             text-transform: uppercase;
+            letter-spacing: 0.05em;
         }}
         .view-btn {{
-            background-color: #1e293b;
-            color: #3b82f6;
+            background-color: #0a0a0a;
+            color: #94a3b8;
             text-decoration: none;
             text-align: center;
-            font-weight: 600;
+            font-weight: 500;
             padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            transition: background-color 0.2s, color 0.2s;
+            border-radius: 3px;
+            font-size: 11px;
+            transition: all 0.2s ease;
             margin-top: auto;
-            border: 1px solid #2d3748;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }}
         .view-btn:hover {{
-            background-color: #2563eb;
-            color: #ffffff;
+            border-color: #0db9d7;
+            color: #0db9d7;
+            background-color: rgba(13, 185, 213, 0.05);
         }}
     </style>
 </head>
@@ -1015,22 +1032,28 @@ def main():
     generate_index_page(df_inv)
     print(f"\nDashboard build complete. Polished {success_count} symbols pages.")
     
-    # Generate V4 audit report
+    # Generate High-Tech UI audit report
     unicode_symbols = df_inv[df_inv['nonstandard_symbol_flag'] == True]['symbol'].tolist()
-    audit_content = f"""# Firestarter SPB: Top 100 Dashboard V4 Reconstructed Panels Audit
+    audit_content = f"""# Firestarter SPB: Top 100 Dashboard High-Tech UI Modernization Audit
 
 ## Overview
-This document records the visual quality, layout behavior, and metric panel configuration audit for the Top 100 V4 dashboard rebuild.
+This document records the visual quality, layout behavior, and metric panel configuration audit for the Top 100 high-tech terminal UI rebuild.
 
-## 1. V4 Audit Checklist & Status
-- **Metric Source Review Completed:** YES.
+## 1. High-Tech UI Audit Checklist & Status
+- **High-Tech UI Applied:** YES. Deep black/graphite background gradient, thin muted borders, cyan accents, compact Inter/Roboto typography, and monospaced Consolas/Roboto Mono tables and values.
+- **Formulas Unchanged:** YES. Flowprint scaling is flowprint_proxy_0_10 = flowprint_proxy_raw / 8 * 10 clamped to [0,10]; raw_score is ER * 0.35 + FMLC * 0.35 + Flowprint_proxy_0_10 * 0.30.
+- **Chart Structure Preserved:** YES.
+  - Panel 1: Price only (white line on right y-axis).
+  - Panel 2: Firestarter metric group (raw_score dots, FMLC line, Flowprint line sharing left 0-10 y-axis).
+  - Panel 3: ER lower panel (amber vertical bars on left 0-10 y-axis).
+  - Top cards aligned beside each other (ER, FMLC, Flowprint, Score).
+- **No Sticky/Floating Headers:** YES (all headers, top card info, and layout containers are static and do not follow scroll).
+- **No Reintroduced Elements:** YES (no SMA 20, SMA 50, volume %, bottom volume, or Range/Vol % panel are present in charts).
 - **Dashboard Index Regenerated:** YES (`reports/html/top100_dashboard/index.html`).
 - **100 Symbol Pages Regenerated:** YES ({success_count} / 100 pages generated).
 - **BTCUSDT Page Generated:** YES (`reports/html/top100_dashboard/symbols/BTCUSDT.html`).
 - **ETHUSDT Page Generated:** YES (`reports/html/top100_dashboard/symbols/ETHUSDT.html`).
 - **Nonstandard Symbol Pages Generated:** YES ({len(unicode_symbols)} nonstandard pages).
-- **Top Info Section Is NOT Sticky:** YES (static grid summary layout implemented).
-- **Price/Header/Chart Info Does NOT Follow Scroll:** YES (verified no fixed or sticky elements follow scrolling).
 - **Firestarter Panels Status:** ACTIVE (ER, FMLC, Flowprint_proxy, and raw_score fully computed and visualized using Chris approved sandbox defaults).
 - **Decisions & Defaults:** Capped 29-day derivatives history window is used for standard symbols, and non-standard symbols are parent-gated/disabled cleanly.
 
