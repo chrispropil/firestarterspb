@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BTWUSDT // Local Chart Viewer</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0b0c10;
+            color: #cbd5e1;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .header {
+            background-color: #12131a;
+            border: 1px solid #1f2937;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        .header h2 {
+            font-family: 'Outfit', sans-serif;
+            color: #ffffff;
+            margin: 0 0 15px 0;
+            font-size: 24px;
+        }
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        select {
+            background-color: #1f2937;
+            color: white;
+            border: 1px solid #374151;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            cursor: pointer;
+        }
+        .home-btn {
+            background-color: #2563eb;
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        .home-btn:hover {
+            background-color: #3b82f6;
+        }
+        .hover-readout {
+            margin-top: 15px;
+            padding: 12px;
+            background-color: #181922;
+            border: 1px solid #1f2937;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 14px;
+            color: #38bdf8;
+        }
+        .note-banner {
+            background-color: #1e1b4b;
+            border-left: 4px solid #4f46e5;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #c7d2fe;
+        }
+        #chart {
+            background-color: #12131a;
+            border: 1px solid #1f2937;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+            color: #ffffff;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #1f2937;
+            padding-bottom: 5px;
+        }
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: right;
+            background-color: #111217;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .data-table th, .data-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #1f2937;
+        }
+        .data-table th {
+            background-color: #1a1c23;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        .data-table tr:hover {
+            background-color: #181b24;
+        }
+    </style>
+</head>
+<body>
+    <div class="note-banner">
+        <strong>Notice:</strong> Firestarter metric panels (ER/FMLC/Flowprint) not enabled yet. Current viewer shows raw OHLCV-derived panels only.
+    </div>
+
+    <div class="header">
+        <h2>BTWUSDT // Target Profile Review</h2>
+        <div class="controls">
+            <div class="control-group">
+                <label>Symbol Select:</label>
+                <select id="symbolSelect" onchange="window.location.href=this.value">
+                    <option value="1000BONKUSDT.html" >1000BONKUSDT</option>
+<option value="1000LUNCUSDT.html" >1000LUNCUSDT</option>
+<option value="1000PEPEUSDT.html" >1000PEPEUSDT</option>
+<option value="1000SHIBUSDT.html" >1000SHIBUSDT</option>
+<option value="AAVEUSDT.html" >AAVEUSDT</option>
+<option value="ADAUSDT.html" >ADAUSDT</option>
+<option value="ALGOUSDT.html" >ALGOUSDT</option>
+<option value="ALLOUSDT.html" >ALLOUSDT</option>
+<option value="APTUSDT.html" >APTUSDT</option>
+<option value="ARBUSDT.html" >ARBUSDT</option>
+<option value="ASTERUSDT.html" >ASTERUSDT</option>
+<option value="BABYUSDT.html" >BABYUSDT</option>
+<option value="BANKUSDT.html" >BANKUSDT</option>
+<option value="BASEDUSDT.html" >BASEDUSDT</option>
+<option value="BCHUSDT.html" >BCHUSDT</option>
+<option value="BEATUSDT.html" >BEATUSDT</option>
+<option value="BILLUSDT.html" >BILLUSDT</option>
+<option value="BLESSUSDT.html" >BLESSUSDT</option>
+<option value="BLUAIUSDT.html" >BLUAIUSDT</option>
+<option value="BNBUSDT.html" >BNBUSDT</option>
+<option value="BSBUSDT.html" >BSBUSDT</option>
+<option value="BTCUSDT.html" >BTCUSDT</option>
+<option value="BTWUSDT.html" selected>BTWUSDT</option>
+<option value="CCUSDT.html" >CCUSDT</option>
+<option value="CHZUSDT.html" >CHZUSDT</option>
+<option value="CLOUSDT.html" >CLOUSDT</option>
+<option value="CRVUSDT.html" >CRVUSDT</option>
+<option value="CTSIUSDT.html" >CTSIUSDT</option>
+<option value="DASHUSDT.html" >DASHUSDT</option>
+<option value="DOTUSDT.html" >DOTUSDT</option>
+<option value="EDENUSDT.html" >EDENUSDT</option>
+<option value="ENAUSDT.html" >ENAUSDT</option>
+<option value="EPICUSDT.html" >EPICUSDT</option>
+<option value="ESPORTSUSDT.html" >ESPORTSUSDT</option>
+<option value="ETCUSDT.html" >ETCUSDT</option>
+<option value="ETHUSDT.html" >ETHUSDT</option>
+<option value="FARTCOINUSDT.html" >FARTCOINUSDT</option>
+<option value="FETUSDT.html" >FETUSDT</option>
+<option value="FIDAUSDT.html" >FIDAUSDT</option>
+<option value="FILUSDT.html" >FILUSDT</option>
+<option value="GENIUSUSDT.html" >GENIUSUSDT</option>
+<option value="GIGGLEUSDT.html" >GIGGLEUSDT</option>
+<option value="GUAUSDT.html" >GUAUSDT</option>
+<option value="GWEIUSDT.html" >GWEIUSDT</option>
+<option value="HBARUSDT.html" >HBARUSDT</option>
+<option value="HEIUSDT.html" >HEIUSDT</option>
+<option value="HOMEUSDT.html" >HOMEUSDT</option>
+<option value="HUSDT.html" >HUSDT</option>
+<option value="HYPEUSDT.html" >HYPEUSDT</option>
+<option value="ICPUSDT.html" >ICPUSDT</option>
+<option value="INJUSDT.html" >INJUSDT</option>
+<option value="INUSDT.html" >INUSDT</option>
+<option value="JTOUSDT.html" >JTOUSDT</option>
+<option value="KITEUSDT.html" >KITEUSDT</option>
+<option value="LABUSDT.html" >LABUSDT</option>
+<option value="LITUSDT.html" >LITUSDT</option>
+<option value="LTCUSDT.html" >LTCUSDT</option>
+<option value="MAGMAUSDT.html" >MAGMAUSDT</option>
+<option value="MEMEUSDT.html" >MEMEUSDT</option>
+<option value="NEARUSDT.html" >NEARUSDT</option>
+<option value="ONDOUSDT.html" >ONDOUSDT</option>
+<option value="OPGUSDT.html" >OPGUSDT</option>
+<option value="OPNUSDT.html" >OPNUSDT</option>
+<option value="OPUSDT.html" >OPUSDT</option>
+<option value="PARTIUSDT.html" >PARTIUSDT</option>
+<option value="PAXGUSDT.html" >PAXGUSDT</option>
+<option value="PENGUUSDT.html" >PENGUUSDT</option>
+<option value="PHAROSUSDT.html" >PHAROSUSDT</option>
+<option value="PIPPINUSDT.html" >PIPPINUSDT</option>
+<option value="PLAYUSDT.html" >PLAYUSDT</option>
+<option value="PORTALUSDT.html" >PORTALUSDT</option>
+<option value="PUMPUSDT.html" >PUMPUSDT</option>
+<option value="RAVEUSDT.html" >RAVEUSDT</option>
+<option value="RENDERUSDT.html" >RENDERUSDT</option>
+<option value="SAHARAUSDT.html" >SAHARAUSDT</option>
+<option value="SEIUSDT.html" >SEIUSDT</option>
+<option value="SIRENUSDT.html" >SIRENUSDT</option>
+<option value="SKYAIUSDT.html" >SKYAIUSDT</option>
+<option value="SLXUSDT.html" >SLXUSDT</option>
+<option value="SUIUSDT.html" >SUIUSDT</option>
+<option value="TAOUSDT.html" >TAOUSDT</option>
+<option value="TIAUSDT.html" >TIAUSDT</option>
+<option value="TONUSDT.html" >TONUSDT</option>
+<option value="TRUMPUSDT.html" >TRUMPUSDT</option>
+<option value="TRXUSDT.html" >TRXUSDT</option>
+<option value="UBUSDT.html" >UBUSDT</option>
+<option value="UNIUSDT.html" >UNIUSDT</option>
+<option value="VELVETUSDT.html" >VELVETUSDT</option>
+<option value="VIRTUALUSDT.html" >VIRTUALUSDT</option>
+<option value="VVVUSDT.html" >VVVUSDT</option>
+<option value="WIFUSDT.html" >WIFUSDT</option>
+<option value="WLDUSDT.html" >WLDUSDT</option>
+<option value="WLFIUSDT.html" >WLFIUSDT</option>
+<option value="XLMUSDT.html" >XLMUSDT</option>
+<option value="XMRUSDT.html" >XMRUSDT</option>
+<option value="XPLUSDT.html" >XPLUSDT</option>
+<option value="ZECUSDT.html" >ZECUSDT</option>
+<option value="ZESTUSDT.html" >ZESTUSDT</option>
+<option value="币安人生USDT.html" >币安人生USDT</option>
+<option value="龙虾USDT.html" >龙虾USDT</option>
+
+                </select>
+            </div>
+            <a href="../index.html" class="home-btn">&larr; Home Dashboard</a>
+        </div>
+        <div id="hoverReadout" class="hover-readout">
+            Hover over the chart plots to inspect exact timestamp metrics.
+        </div>
+    </div>
+
+    <div id="chart"></div>
+
+    <div class="section-title">Latest 20 Records Preview (5m Interval)</div>
+    <div class="table-container">
+        <table border="1" class="dataframe data-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>open_datetime</th>
+      <th>open</th>
+      <th>high</th>
+      <th>low</th>
+      <th>close</th>
+      <th>volume</th>
+      <th>trades</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2026-06-07 17:35</td>
+      <td>0.0572</td>
+      <td>0.0575</td>
+      <td>0.0568</td>
+      <td>0.0570</td>
+      <td>4109192</td>
+      <td>7855</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 17:40</td>
+      <td>0.0570</td>
+      <td>0.0585</td>
+      <td>0.0569</td>
+      <td>0.0582</td>
+      <td>10059492</td>
+      <td>13738</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 17:45</td>
+      <td>0.0582</td>
+      <td>0.0585</td>
+      <td>0.0576</td>
+      <td>0.0582</td>
+      <td>5990589</td>
+      <td>11396</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 17:50</td>
+      <td>0.0582</td>
+      <td>0.0585</td>
+      <td>0.0576</td>
+      <td>0.0578</td>
+      <td>7283012</td>
+      <td>11917</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 17:55</td>
+      <td>0.0578</td>
+      <td>0.0584</td>
+      <td>0.0573</td>
+      <td>0.0584</td>
+      <td>4382992</td>
+      <td>9070</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 18:00</td>
+      <td>0.0584</td>
+      <td>0.0585</td>
+      <td>0.0581</td>
+      <td>0.0584</td>
+      <td>9513753</td>
+      <td>11629</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 18:05</td>
+      <td>0.0584</td>
+      <td>0.0589</td>
+      <td>0.0578</td>
+      <td>0.0583</td>
+      <td>5998223</td>
+      <td>9937</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 18:10</td>
+      <td>0.0584</td>
+      <td>0.0590</td>
+      <td>0.0583</td>
+      <td>0.0589</td>
+      <td>6422244</td>
+      <td>10180</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 18:15</td>
+      <td>0.0589</td>
+      <td>0.0590</td>
+      <td>0.0578</td>
+      <td>0.0588</td>
+      <td>6317106</td>
+      <td>9979</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 18:20</td>
+      <td>0.0588</td>
+      <td>0.0592</td>
+      <td>0.0583</td>
+      <td>0.0589</td>
+      <td>4830028</td>
+      <td>8078</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 18:25</td>
+      <td>0.0589</td>
+      <td>0.0596</td>
+      <td>0.0588</td>
+      <td>0.0594</td>
+      <td>5730674</td>
+      <td>8749</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 18:30</td>
+      <td>0.0594</td>
+      <td>0.0596</td>
+      <td>0.0584</td>
+      <td>0.0593</td>
+      <td>6551162</td>
+      <td>11353</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 18:35</td>
+      <td>0.0593</td>
+      <td>0.0603</td>
+      <td>0.0589</td>
+      <td>0.0600</td>
+      <td>10565489</td>
+      <td>14747</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 18:40</td>
+      <td>0.0600</td>
+      <td>0.0605</td>
+      <td>0.0599</td>
+      <td>0.0604</td>
+      <td>5953179</td>
+      <td>8091</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 18:45</td>
+      <td>0.0604</td>
+      <td>0.0618</td>
+      <td>0.0598</td>
+      <td>0.0607</td>
+      <td>10002501</td>
+      <td>13794</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 18:50</td>
+      <td>0.0608</td>
+      <td>0.0615</td>
+      <td>0.0604</td>
+      <td>0.0612</td>
+      <td>6151609</td>
+      <td>9476</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 18:55</td>
+      <td>0.0612</td>
+      <td>0.0622</td>
+      <td>0.0612</td>
+      <td>0.0619</td>
+      <td>11337068</td>
+      <td>14203</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 19:00</td>
+      <td>0.0619</td>
+      <td>0.0619</td>
+      <td>0.0596</td>
+      <td>0.0602</td>
+      <td>15037489</td>
+      <td>19110</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 19:05</td>
+      <td>0.0601</td>
+      <td>0.0604</td>
+      <td>0.0598</td>
+      <td>0.0601</td>
+      <td>7232884</td>
+      <td>10481</td>
+    </tr>
+    <tr>
+      <td>2026-06-07 19:10</td>
+      <td>0.0601</td>
+      <td>0.0610</td>
+      <td>0.0598</td>
+      <td>0.0610</td>
+      <td>3632293</td>
+      <td>5092</td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+    <div class="section-title">1-Hour Resampled Summary Statistics</div>
+    <div class="table-container">
+        <table border="1" class="dataframe data-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>open</th>
+      <th>high</th>
+      <th>low</th>
+      <th>close</th>
+      <th>volume</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>count</th>
+      <td>78.0000</td>
+      <td>78.0000</td>
+      <td>78.0000</td>
+      <td>78.0000</td>
+      <td>78.0000</td>
+    </tr>
+    <tr>
+      <th>mean</th>
+      <td>0.0459</td>
+      <td>0.0491</td>
+      <td>0.0435</td>
+      <td>0.0464</td>
+      <td>219,791,204.8077</td>
+    </tr>
+    <tr>
+      <th>std</th>
+      <td>0.0098</td>
+      <td>0.0099</td>
+      <td>0.0093</td>
+      <td>0.0095</td>
+      <td>147,006,038.0953</td>
+    </tr>
+    <tr>
+      <th>min</th>
+      <td>0.0172</td>
+      <td>0.0197</td>
+      <td>0.0166</td>
+      <td>0.0172</td>
+      <td>25,902,666.0000</td>
+    </tr>
+    <tr>
+      <th>25%</th>
+      <td>0.0413</td>
+      <td>0.0439</td>
+      <td>0.0400</td>
+      <td>0.0415</td>
+      <td>98,664,110.0000</td>
+    </tr>
+    <tr>
+      <th>50%</th>
+      <td>0.0459</td>
+      <td>0.0488</td>
+      <td>0.0440</td>
+      <td>0.0462</td>
+      <td>188,504,147.0000</td>
+    </tr>
+    <tr>
+      <th>75%</th>
+      <td>0.0540</td>
+      <td>0.0561</td>
+      <td>0.0501</td>
+      <td>0.0541</td>
+      <td>286,771,823.0000</td>
+    </tr>
+    <tr>
+      <th>max</th>
+      <td>0.0678</td>
+      <td>0.0740</td>
+      <td>0.0596</td>
+      <td>0.0679</td>
+      <td>728,209,272.0000</td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+    <div class="section-title">4-Hour Resampled Summary Statistics</div>
+    <div class="table-container">
+        <table border="1" class="dataframe data-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>open</th>
+      <th>high</th>
+      <th>low</th>
+      <th>close</th>
+      <th>volume</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>count</th>
+      <td>20.0000</td>
+      <td>20.0000</td>
+      <td>20.0000</td>
+      <td>20.0000</td>
+      <td>20.0000</td>
+    </tr>
+    <tr>
+      <th>mean</th>
+      <td>0.0451</td>
+      <td>0.0522</td>
+      <td>0.0409</td>
+      <td>0.0471</td>
+      <td>857,185,698.7500</td>
+    </tr>
+    <tr>
+      <th>std</th>
+      <td>0.0112</td>
+      <td>0.0114</td>
+      <td>0.0099</td>
+      <td>0.0100</td>
+      <td>501,861,588.2446</td>
+    </tr>
+    <tr>
+      <th>min</th>
+      <td>0.0197</td>
+      <td>0.0258</td>
+      <td>0.0166</td>
+      <td>0.0233</td>
+      <td>211,654,746.0000</td>
+    </tr>
+    <tr>
+      <th>25%</th>
+      <td>0.0407</td>
+      <td>0.0462</td>
+      <td>0.0369</td>
+      <td>0.0413</td>
+      <td>392,736,395.2500</td>
+    </tr>
+    <tr>
+      <th>50%</th>
+      <td>0.0446</td>
+      <td>0.0542</td>
+      <td>0.0424</td>
+      <td>0.0488</td>
+      <td>789,355,160.0000</td>
+    </tr>
+    <tr>
+      <th>75%</th>
+      <td>0.0544</td>
+      <td>0.0611</td>
+      <td>0.0476</td>
+      <td>0.0547</td>
+      <td>1,459,419,767.7500</td>
+    </tr>
+    <tr>
+      <th>max</th>
+      <td>0.0572</td>
+      <td>0.0740</td>
+      <td>0.0541</td>
+      <td>0.0610</td>
+      <td>1,647,347,895.0000</td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+    <script>
+        const chartData = {"dates": ["2026-06-04T14:00:00Z", "2026-06-04T15:00:00Z", "2026-06-04T16:00:00Z", "2026-06-04T17:00:00Z", "2026-06-04T18:00:00Z", "2026-06-04T19:00:00Z", "2026-06-04T20:00:00Z", "2026-06-04T21:00:00Z", "2026-06-04T22:00:00Z", "2026-06-04T23:00:00Z", "2026-06-05T00:00:00Z", "2026-06-05T01:00:00Z", "2026-06-05T02:00:00Z", "2026-06-05T03:00:00Z", "2026-06-05T04:00:00Z", "2026-06-05T05:00:00Z", "2026-06-05T06:00:00Z", "2026-06-05T07:00:00Z", "2026-06-05T08:00:00Z", "2026-06-05T09:00:00Z", "2026-06-05T10:00:00Z", "2026-06-05T11:00:00Z", "2026-06-05T12:00:00Z", "2026-06-05T13:00:00Z", "2026-06-05T14:00:00Z", "2026-06-05T15:00:00Z", "2026-06-05T16:00:00Z", "2026-06-05T17:00:00Z", "2026-06-05T18:00:00Z", "2026-06-05T19:00:00Z", "2026-06-05T20:00:00Z", "2026-06-05T21:00:00Z", "2026-06-05T22:00:00Z", "2026-06-05T23:00:00Z", "2026-06-06T00:00:00Z", "2026-06-06T01:00:00Z", "2026-06-06T02:00:00Z", "2026-06-06T03:00:00Z", "2026-06-06T04:00:00Z", "2026-06-06T05:00:00Z", "2026-06-06T06:00:00Z", "2026-06-06T07:00:00Z", "2026-06-06T08:00:00Z", "2026-06-06T09:00:00Z", "2026-06-06T10:00:00Z", "2026-06-06T11:00:00Z", "2026-06-06T12:00:00Z", "2026-06-06T13:00:00Z", "2026-06-06T14:00:00Z", "2026-06-06T15:00:00Z", "2026-06-06T16:00:00Z", "2026-06-06T17:00:00Z", "2026-06-06T18:00:00Z", "2026-06-06T19:00:00Z", "2026-06-06T20:00:00Z", "2026-06-06T21:00:00Z", "2026-06-06T22:00:00Z", "2026-06-06T23:00:00Z", "2026-06-07T00:00:00Z", "2026-06-07T01:00:00Z", "2026-06-07T02:00:00Z", "2026-06-07T03:00:00Z", "2026-06-07T04:00:00Z", "2026-06-07T05:00:00Z", "2026-06-07T06:00:00Z", "2026-06-07T07:00:00Z", "2026-06-07T08:00:00Z", "2026-06-07T09:00:00Z", "2026-06-07T10:00:00Z", "2026-06-07T11:00:00Z", "2026-06-07T12:00:00Z", "2026-06-07T13:00:00Z", "2026-06-07T14:00:00Z", "2026-06-07T15:00:00Z", "2026-06-07T16:00:00Z", "2026-06-07T17:00:00Z", "2026-06-07T18:00:00Z", "2026-06-07T19:00:00Z"], "open": [0.01965, 0.017166, 0.023349, 0.022943, 0.031078, 0.03168, 0.030009, 0.030564, 0.03192, 0.03088, 0.03672, 0.039675, 0.043705, 0.042084, 0.041097, 0.04223, 0.041259, 0.036695, 0.039407, 0.040248, 0.042, 0.043013, 0.042386, 0.045831, 0.042812, 0.041904, 0.044028, 0.044183, 0.050396, 0.053375, 0.056314, 0.054971, 0.050247, 0.050439, 0.054359, 0.05193, 0.050663, 0.053495, 0.052454, 0.045953, 0.04556, 0.046494, 0.045269, 0.04339, 0.041895, 0.042702, 0.041335, 0.040887, 0.040059, 0.040594, 0.043957, 0.04544, 0.048013, 0.046967, 0.054054, 0.059057, 0.053608, 0.055056, 0.054027, 0.053905, 0.054987, 0.054715, 0.054371, 0.052549, 0.05038, 0.052128, 0.055965, 0.067798, 0.054737, 0.055362, 0.05717, 0.054097, 0.05049, 0.047487, 0.055614, 0.055552, 0.058413, 0.061896], "high": [0.01965, 0.025774, 0.025895, 0.032, 0.032985, 0.0318, 0.032988, 0.0336, 0.032887, 0.0395, 0.048281, 0.0449, 0.04769, 0.042865, 0.043774, 0.0446, 0.043418, 0.041317, 0.04132, 0.044421, 0.044957, 0.043385, 0.047474, 0.04875, 0.044994, 0.044828, 0.045791, 0.051734, 0.055356, 0.061493, 0.0576, 0.055996, 0.051391, 0.055, 0.055614, 0.052983, 0.053779, 0.053823, 0.052794, 0.04885, 0.047398, 0.047085, 0.047989, 0.044434, 0.044256, 0.043315, 0.04281, 0.041694, 0.042226, 0.046612, 0.048155, 0.049681, 0.048642, 0.061, 0.0618, 0.059381, 0.05666, 0.055679, 0.055382, 0.056267, 0.056139, 0.057986, 0.055855, 0.052771, 0.0525, 0.056579, 0.06885, 0.074, 0.057699, 0.05773, 0.06272, 0.054739, 0.051996, 0.056349, 0.056888, 0.0585, 0.062249, 0.061936], "low": [0.016613, 0.016559, 0.021165, 0.021826, 0.028, 0.028841, 0.029659, 0.029897, 0.0286, 0.029893, 0.036561, 0.039064, 0.04132, 0.037002, 0.040566, 0.040353, 0.035277, 0.034214, 0.037064, 0.038888, 0.04103, 0.041117, 0.041545, 0.0423, 0.039645, 0.040704, 0.0432, 0.043608, 0.050105, 0.052236, 0.051436, 0.048329, 0.046786, 0.05005, 0.047154, 0.0492, 0.049608, 0.049766, 0.04165, 0.044355, 0.044969, 0.043677, 0.042682, 0.041298, 0.040795, 0.0408, 0.040101, 0.039572, 0.040028, 0.040175, 0.043244, 0.04475, 0.045804, 0.046953, 0.053525, 0.050266, 0.052334, 0.052169, 0.053524, 0.05322, 0.053104, 0.053753, 0.051504, 0.050005, 0.048807, 0.051731, 0.05594, 0.0495, 0.04881, 0.0547, 0.05325, 0.05, 0.047429, 0.046637, 0.054441, 0.0541, 0.057785, 0.059587], "close": [0.017166, 0.023285, 0.022943, 0.031122, 0.031703, 0.029998, 0.030564, 0.031895, 0.030899, 0.036721, 0.039675, 0.043684, 0.042065, 0.041117, 0.042209, 0.041254, 0.036712, 0.039381, 0.040249, 0.041977, 0.043008, 0.042357, 0.045829, 0.042789, 0.041879, 0.044033, 0.044216, 0.050396, 0.053336, 0.056322, 0.054974, 0.050246, 0.050439, 0.054378, 0.051929, 0.050665, 0.053513, 0.052461, 0.04595, 0.045556, 0.046478, 0.04523, 0.043409, 0.041888, 0.042692, 0.041357, 0.040887, 0.040059, 0.0406, 0.043956, 0.04544, 0.04801, 0.047004, 0.054065, 0.059057, 0.053584, 0.055056, 0.054026, 0.053907, 0.05498, 0.054714, 0.054371, 0.052539, 0.05038, 0.052182, 0.055975, 0.06786, 0.054737, 0.055322, 0.05717, 0.054097, 0.05049, 0.047511, 0.055616, 0.055525, 0.058412, 0.061854, 0.061028], "volume": [166843864, 226689808, 364121893, 421824479, 466718137, 285597011, 192935065, 186527296, 217102242, 267920254, 565471579, 287163427, 267600085, 371164622, 246873006, 282833693, 523565379, 479656428, 259335245, 275049481, 291507920, 155016068, 437583230, 411126989, 401564539, 285275563, 236167522, 418320873, 487584966, 505274534, 243903980, 213426516, 177160274, 139555088, 319211049, 201554429, 152918117, 131975380, 379831266, 190480998, 93988861, 102800886, 176373774, 152090626, 128752592, 91928895, 98803079, 86559661, 80773780, 124208045, 119879695, 93748703, 58542476, 214020016, 105682465, 98617787, 52947992, 45076365, 41206137, 56092410, 40771722, 73584477, 67337700, 60888640, 85617522, 134106811, 291360786, 728209272, 308491977, 120697751, 215487293, 174732152, 150064696, 264380321, 79529594, 76651019, 89373036, 25902666], "sma_20": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0.03473095, 0.03602305, 0.03697665, 0.03812095, 0.0387043, 0.0392131, 0.039914849999999995, 0.04059745, 0.041522500000000004, 0.042644350000000004, 0.0436244, 0.04438935, 0.044717450000000006, 0.04513615, 0.0457992, 0.046285200000000006, 0.04675575, 0.04759580000000001, 0.0482498, 0.04853485, 0.0487138, 0.0488873, 0.049030950000000004, 0.04890995, 0.0488649, 0.048905550000000006, 0.04877175, 0.048605300000000004, 0.04808845, 0.04745165, 0.04683335, 0.04635665, 0.04624485, 0.0460731, 0.04605745, 0.04641384999999999, 0.0465598, 0.046636949999999996, 0.0467152, 0.047113050000000004, 0.04758425, 0.04799605, 0.0484531, 0.0489096, 0.0493342, 0.0498087, 0.0505396, 0.051888250000000004, 0.05262215, 0.05335825000000001, 0.054018949999999996, 0.05445180000000001, 0.054575799999999994, 0.05460115000000001, 0.054678700000000004, 0.0545021, 0.0547435, 0.055083400000000005, 0.055433500000000004], "sma_50": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0.041909020000000005, 0.0424745, 0.042969, 0.04345021999999999, 0.043909079999999996, 0.04445616, 0.04492788, 0.04541772, 0.045860340000000006, 0.046320499999999994, 0.04668567999999999, 0.04698646, 0.0472002, 0.04740968, 0.04759494, 0.0477944, 0.04808882, 0.04871178, 0.0490189, 0.04932036, 0.049624220000000004, 0.049846, 0.05000866, 0.0500423, 0.05029884, 0.05057176, 0.05085934, 0.051212099999999997, 0.05142474], "range_pct": [15.455470737913494, 53.6816963765583, 20.25782688766115, 44.34468029464324, 16.04028573267263, 9.340277777777787, 11.093338665067153, 12.115560790472445, 13.430451127819548, 31.11075129533679, 31.91721132897602, 14.709514807813488, 14.574991419746025, 13.931660488546715, 7.805922573423857, 10.05683163627753, 19.73145253156886, 19.356860607712218, 10.800111655289678, 13.747266944941373, 9.349999999999998, 5.272824494920139, 13.988109281366498, 14.073443738953994, 12.494160515743248, 9.841542573501345, 5.884891432724621, 18.391689111196616, 10.419477736328291, 17.343325526932087, 10.945768370209887, 13.947354059413145, 9.164726252313567, 9.813834532802005, 15.563200206037632, 7.284806470248414, 8.232832639204155, 7.583886344518189, 21.245281580051095, 9.781733510325767, 5.331431079894646, 7.329978061685381, 11.723254324151185, 7.2274717676884075, 8.26112901300871, 5.889653880380302, 6.553767993226088, 5.189913664489933, 5.486906812451631, 15.857023205399809, 11.17228200286645, 10.851672535211279, 5.910899131485223, 29.90823344050077, 15.308765308765304, 15.434241495504352, 8.069691090881964, 6.375326939843068, 3.4390212301256753, 5.652536870420173, 5.519486424063875, 7.736452526729417, 8.00242776480109, 5.263658680469653, 7.330289797538696, 9.30018416206261, 23.067988921647455, 36.136759196436465, 16.23947238613735, 5.473068169502543, 16.56463179989505, 8.760190029021944, 9.045355515943754, 20.451913155179323, 4.3999712302657565, 7.920506912442399, 7.642134456371006, 3.7950756107018173], "rolling_vol": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 10.762974830547462, 8.934237324060135, 8.932791363630653, 6.57844929399432, 6.630775310780584, 6.468805149153685, 6.477564692342802, 6.9348163973870145, 6.8497588787239865, 5.985342684659491, 5.9159087348354165, 6.054854109095814, 5.963755405203992, 6.089323728362282, 6.225914798409959, 6.230974011800925, 5.532874060876472, 5.458961574306052, 6.363574472269981, 6.315827860129122, 6.309425132329414, 6.334147420671873, 6.146491205035367, 6.002917829658374, 5.998686902623067, 5.92433936070929, 5.92450096206197, 5.008639962667405, 4.787157898391687, 5.0016812805202715, 5.094182212179754, 4.918072058910724, 4.933491702165665, 5.639370370537592, 5.861351335444819, 6.27427949184357, 6.183871268775566, 6.182154066651807, 5.32266126216039, 5.31384802359574, 5.31677000586347, 5.26381043088809, 5.231628663178026, 5.262061406076851, 5.290132789103407, 5.356791564539039, 6.617714291177346, 8.48950363319007, 8.49011062118487, 8.36848704340573, 8.489741777489057, 8.586163879039884, 8.68886699387233, 8.844594461394825, 8.604888909516546, 8.38586059091318, 8.455804241288286, 8.448308347786265]};
+        
+        const dates = chartData.dates;
+        const close = chartData.close;
+        const open = chartData.open;
+        const high = chartData.high;
+        const low = chartData.low;
+        const volume = chartData.volume;
+        const sma20 = chartData.sma_20;
+        const sma50 = chartData.sma_50;
+        const rangePct = chartData.range_pct;
+        const rollingVol = chartData.rolling_vol;
+
+        // Compute volume bar colors
+        const volColors = close.map((c, i) => c >= open[i] ? '#10b981' : '#ef4444');
+
+        const tracePrice = {
+            x: dates,
+            y: close,
+            type: 'scatter',
+            mode: 'lines',
+            name: '1h Close',
+            line: { color: '#3b82f6', width: 1.5 }
+        };
+
+        const traceSMA20 = {
+            x: dates,
+            y: sma20,
+            type: 'scatter',
+            mode: 'lines',
+            name: '20 SMA',
+            line: { color: '#f59e0b', width: 1.0, dash: 'dash' }
+        };
+
+        const traceSMA50 = {
+            x: dates,
+            y: sma50,
+            type: 'scatter',
+            mode: 'lines',
+            name: '50 SMA',
+            line: { color: '#ec4899', width: 1.0, dash: 'dash' }
+        };
+
+        const traceVolume = {
+            x: dates,
+            y: volume,
+            type: 'bar',
+            name: 'Volume',
+            marker: { color: volColors },
+            xaxis: 'x',
+            yaxis: 'y2'
+        };
+
+        const traceRange = {
+            x: dates,
+            y: rangePct,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Range %',
+            line: { color: '#a855f7', width: 1.2 },
+            xaxis: 'x',
+            yaxis: 'y3'
+        };
+
+        const traceVol = {
+            x: dates,
+            y: rollingVol,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Rolling Vol',
+            line: { color: '#06b6d4', width: 1.2 },
+            xaxis: 'x',
+            yaxis: 'y4'
+        };
+
+        const data = [tracePrice, traceSMA20, traceSMA50, traceVolume, traceRange, traceVol];
+
+        const layout = {
+            grid: { rows: 4, columns: 1, pattern: 'coupled' },
+            plot_bgcolor: '#151720',
+            paper_bgcolor: '#0d0e12',
+            xaxis: {
+                gridcolor: '#2A2A35',
+                tickcolor: '#94a3b8',
+                font: { color: '#94a3b8' }
+            },
+            yaxis: {
+                title: 'Price (USDT)',
+                gridcolor: '#2A2A35',
+                tickcolor: '#94a3b8',
+                font: { color: '#94a3b8' },
+                domain: [0.55, 1.0]
+            },
+            yaxis2: {
+                title: 'Volume',
+                gridcolor: '#2A2A35',
+                tickcolor: '#94a3b8',
+                font: { color: '#94a3b8' },
+                domain: [0.38, 0.52]
+            },
+            yaxis3: {
+                title: 'Range %',
+                gridcolor: '#2A2A35',
+                tickcolor: '#94a3b8',
+                font: { color: '#94a3b8' },
+                domain: [0.20, 0.35]
+            },
+            yaxis4: {
+                title: 'Vol %',
+                gridcolor: '#2A2A35',
+                tickcolor: '#94a3b8',
+                font: { color: '#94a3b8' },
+                domain: [0.0, 0.17]
+            },
+            margin: { t: 30, b: 30, l: 60, r: 20 },
+            showlegend: true,
+            legend: {
+                x: 0,
+                y: 1.1,
+                orientation: 'h',
+                font: { color: '#ffffff' }
+            }
+        };
+
+        Plotly.newPlot('chart', data, layout);
+
+        const gd = document.getElementById('chart');
+        gd.on('plotly_hover', function(data) {
+            const pts = data.points[0];
+            const idx = pts.pointIndex;
+            const dateStr = pts.x;
+            const priceVal = close[idx];
+            const volVal = volume[idx];
+            const rangeVal = rangePct[idx];
+            const volPctVal = rollingVol[idx];
+            
+            const readout = document.getElementById('hoverReadout');
+            readout.innerHTML = `[UTC TIME: ${dateStr}] // Price: ${priceVal !== undefined && priceVal !== null ? priceVal.toFixed(4) : 'N/A'} // Volume: ${volVal !== undefined && volVal !== null ? volVal.toLocaleString() : 'N/A'} // Spread: ${rangeVal !== undefined && rangeVal !== null ? rangeVal.toFixed(4) + '%' : 'N/A'} // Volatility: ${volPctVal !== undefined && volPctVal !== null ? volPctVal.toFixed(4) + '%' : 'N/A'}`;
+        });
+    </script>
+</body>
+</html>
