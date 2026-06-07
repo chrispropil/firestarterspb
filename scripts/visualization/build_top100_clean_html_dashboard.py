@@ -268,14 +268,10 @@ def generate_symbol_page(symbol, all_symbols, metadata):
     # Clean missing values for JSON serialization
     df_merged = df_merged.replace({np.nan: None})
 
-    # Prepare JS data payload — SMA 20/50 removed, Firestarter metrics overlay price
+    # Prepare JS data payload — price on right axis; metrics on left; volume removed
     chart_data = {
         "dates": df_merged.index.strftime('%Y-%m-%dT%H:%M:%SZ').tolist(),
-        "open": df_merged['open'].tolist(),
-        "high": df_merged['high'].tolist(),
-        "low": df_merged['low'].tolist(),
         "close": df_merged['close'].tolist(),
-        "volume": df_merged['volume'].tolist(),
         "range_pct": df_merged['range_pct'].tolist(),
         "rolling_vol": df_merged['rolling_vol'].tolist(),
         "er": df_merged['er'].tolist(),
@@ -283,6 +279,16 @@ def generate_symbol_page(symbol, all_symbols, metadata):
         "flowprint": df_merged['flowprint'].tolist(),
         "raw_score": df_merged['raw_score'].tolist()
     }
+
+    # Latest non-null metric values for top output cards
+    def _last_val(col):
+        vals = [v for v in df_merged[col] if v is not None]
+        return f"{vals[-1]:.2f}" if vals else "N/A"
+
+    card_er    = _last_val('er')
+    card_fmlc  = _last_val('fmlc')
+    card_fp    = _last_val('flowprint')
+    card_score = _last_val('raw_score')
 
     # Format tables with professional classes and styles
     table_desc_1h = df_merged[['open', 'high', 'low', 'close', 'volume']].describe().to_html(classes='data-table', float_format=lambda x: f"{x:,.4f}")
@@ -424,6 +430,45 @@ def generate_symbol_page(symbol, all_symbols, metadata):
         .text-danger {{
             color: #ef4444;
         }}
+        /* ── Metric output cards ── */
+        .metric-cards {{
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }}
+        .metric-card {{
+            flex: 1;
+            background-color: #0e1014;
+            border: 1px solid #1e222b;
+            border-radius: 6px;
+            padding: 10px 14px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.45);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }}
+        .mc-label {{
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #475569;
+        }}
+        .mc-value {{
+            font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1;
+        }}
+        .mc-sub {{
+            font-size: 10px;
+            color: #475569;
+            font-family: 'Consolas', monospace;
+        }}
+        .mc-er   .mc-value {{ color: #f59e0b; }}
+        .mc-fmlc .mc-value {{ color: #ef4444; }}
+        .mc-fp   .mc-value {{ color: #34d399; }}
+        .mc-score .mc-value {{ color: #a78bfa; }}
         .hover-readout {{
             background-color: #0e1014;
             border: 1px solid #1e222b;
@@ -547,6 +592,30 @@ def generate_symbol_page(symbol, all_symbols, metadata):
         </div>
     </div>
 
+    <!-- Metric output cards: latest values per symbol -->
+    <div class="metric-cards">
+        <div class="metric-card mc-er">
+            <span class="mc-label">ER &mdash; Expansion Readiness</span>
+            <span class="mc-value">{card_er}</span>
+            <span class="mc-sub">scale 0&ndash;10</span>
+        </div>
+        <div class="metric-card mc-fmlc">
+            <span class="mc-label">FMLC &mdash; Momentum / Liquidity</span>
+            <span class="mc-value">{card_fmlc}</span>
+            <span class="mc-sub">scale 0&ndash;10</span>
+        </div>
+        <div class="metric-card mc-fp">
+            <span class="mc-label">Flowprint&nbsp;proxy</span>
+            <span class="mc-value">{card_fp}</span>
+            <span class="mc-sub">scale 0&ndash;8</span>
+        </div>
+        <div class="metric-card mc-score">
+            <span class="mc-label">raw_score &mdash; blended</span>
+            <span class="mc-value">{card_score}</span>
+            <span class="mc-sub">scale 0&ndash;10</span>
+        </div>
+    </div>
+
     <div id="hoverReadout" class="hover-readout">
         [NO SIGNAL] Hover over the plots to capture active timestamp records.
     </div>
@@ -571,31 +640,57 @@ def generate_symbol_page(symbol, all_symbols, metadata):
     <script>
         const chartData = {json.dumps(chart_data)};
 
-        const dates    = chartData.dates;
-        const closeArr = chartData.close;
-        const rangePct = chartData.range_pct;
+        const dates      = chartData.dates;
+        const closeArr   = chartData.close;
+        const rangePct   = chartData.range_pct;
         const rollingVol = chartData.rolling_vol;
+        const er         = chartData.er;
+        const fmlc       = chartData.fmlc;
+        const flowprint  = chartData.flowprint;
+        const rawScore   = chartData.raw_score;
 
-        const er        = chartData.er;
-        const fmlc      = chartData.fmlc;
-        const flowprint = chartData.flowprint;
-        const rawScore  = chartData.raw_score;
-
-        // ── Panel 1 (top): White price line — no overlays, no SMA
+        // ── Main chart: Price on RIGHT y-axis (white line)
         const tracePrice = {{
             x: dates, y: closeArr,
             type: 'scatter', mode: 'lines',
             name: 'Price',
-            line: {{ color: '#ffffff', width: 1.4 }},
+            line: {{ color: '#ffffff', width: 1.5 }},
+            yaxis: 'y2'
+        }};
+
+        // ── Main chart: FMLC — red, opacity intensifies with value, LEFT axis 0-10
+        // Cell 1 partial reconstruction — approved sandbox defaults — research only
+        const traceFMLC = {{
+            x: dates, y: fmlc,
+            type: 'scatter', mode: 'lines',
+            name: 'FMLC',
+            line: {{ color: 'rgba(239,68,68,0.82)', width: 1.2 }},
             yaxis: 'y'
         }};
 
-        // ── Panel 2: ER — vertical bars, own panel, fixed 0–10
-        // Cell 1 partial reconstruction — approved sandbox defaults — research only
+        // ── Main chart: Flowprint_proxy — thin light green line, LEFT axis
+        const traceFlowprint = {{
+            x: dates, y: flowprint,
+            type: 'scatter', mode: 'lines',
+            name: 'Flowprint',
+            line: {{ color: 'rgba(52,211,153,0.55)', width: 0.9 }},
+            yaxis: 'y'
+        }};
+
+        // ── Main chart: raw_score — purple dots, LEFT axis
+        const traceRawScore = {{
+            x: dates, y: rawScore,
+            type: 'scatter', mode: 'markers',
+            name: 'Score',
+            marker: {{ color: 'rgba(167,139,250,0.78)', size: 3.5 }},
+            yaxis: 'y'
+        }};
+
+        // ── ER panel: amber vertical bars, fixed 0-10, own sub-panel below main chart
         const erColors = er.map(v => {{
-            if (v === null || v === undefined) return 'rgba(100,116,139,0.4)';
-            if (v >= 7) return 'rgba(245,158,11,0.85)';
-            if (v >= 4) return 'rgba(245,158,11,0.55)';
+            if (v === null || v === undefined) return 'rgba(100,116,139,0.35)';
+            if (v >= 7) return 'rgba(245,158,11,0.90)';
+            if (v >= 4) return 'rgba(245,158,11,0.58)';
             return 'rgba(245,158,11,0.28)';
         }});
         const traceER = {{
@@ -603,55 +698,29 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             type: 'bar',
             name: 'ER',
             marker: {{ color: erColors }},
-            yaxis: 'y2'
-        }};
-
-        // ── Panel 3: FMLC / Flowprint_proxy / raw_score lines
-        const traceFMLC = {{
-            x: dates, y: fmlc,
-            type: 'scatter', mode: 'lines',
-            name: 'FMLC (0-10)',
-            line: {{ color: 'rgba(239,68,68,0.80)', width: 1.0 }},
             yaxis: 'y3'
         }};
 
-        const traceFlowprint = {{
-            x: dates, y: flowprint,
-            type: 'scatter', mode: 'lines',
-            name: 'Flowprint_proxy (0-8)',
-            line: {{ color: 'rgba(16,185,129,0.80)', width: 1.0 }},
-            yaxis: 'y3'
-        }};
-
-        const traceRawScore = {{
-            x: dates, y: rawScore,
-            type: 'scatter', mode: 'lines',
-            name: 'raw_score (0-10)',
-            line: {{ color: 'rgba(168,85,247,0.90)', width: 1.6 }},
-            yaxis: 'y3'
-        }};
-
-        // ── Panel 4 (bottom): Range % and Rolling Volatility
+        // ── Bottom panel: Range % and Rolling Volatility
         const traceRange = {{
             x: dates, y: rangePct,
             type: 'scatter', mode: 'lines',
             name: 'Range %',
-            line: {{ color: '#818cf8', width: 1.0 }},
+            line: {{ color: '#818cf8', width: 0.9 }},
             yaxis: 'y4'
         }};
-
         const traceRollingVol = {{
             x: dates, y: rollingVol,
             type: 'scatter', mode: 'lines',
             name: 'Rolling Vol %',
-            line: {{ color: '#06b6d4', width: 1.0 }},
+            line: {{ color: '#06b6d4', width: 0.9 }},
             yaxis: 'y4'
         }};
 
         const data = [
             tracePrice,
-            traceER,
             traceFMLC, traceFlowprint, traceRawScore,
+            traceER,
             traceRange, traceRollingVol
         ];
 
@@ -659,50 +728,53 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             plot_bgcolor:  '#0e1014',
             paper_bgcolor: '#08090b',
             font: {{ family: 'Inter, sans-serif', size: 11, color: '#64748b' }},
-            bargap: 0.15,
+            bargap: 0.12,
 
             xaxis: {{
                 gridcolor: '#1a1c23', linecolor: '#1e222b', tickcolor: '#1e222b',
                 domain: [0, 1]
             }},
 
-            // Panel 1 — white price line, no overlays
+            // LEFT y-axis — Firestarter Metrics (0-10)  [main chart]
             yaxis: {{
-                title: 'Price (USDT)',
+                title: 'Firestarter Metrics',
                 gridcolor: '#1e222b', linecolor: '#1e222b', tickcolor: '#1e222b',
-                tickfont: {{ color: '#94a3b8' }},
-                domain: [0.64, 1.0]
+                tickfont: {{ color: '#64748b' }},
+                domain: [0.44, 1.0],
+                range: [0, 10],
+                side: 'left'
             }},
 
-            // Panel 2 — ER bars, fixed 0–10
+            // RIGHT y-axis — Price (USDT)  [main chart, overlaying metrics]
             yaxis2: {{
-                title: 'ER  (0–10)',
+                title: 'Price (USDT)',
+                gridcolor: 'rgba(0,0,0,0)',
+                linecolor: '#1e222b', tickcolor: '#1e222b',
+                tickfont: {{ color: '#e2e8f0' }},
+                overlaying: 'y',
+                side: 'right',
+                showgrid: false
+            }},
+
+            // ER sub-panel
+            yaxis3: {{
+                title: 'ER  (0\u201310)',
                 gridcolor: '#1e222b', linecolor: '#1e222b', tickcolor: '#1e222b',
                 tickfont: {{ color: '#f59e0b' }},
-                domain: [0.43, 0.60],
+                domain: [0.24, 0.40],
                 range: [0, 10],
                 fixedrange: true
             }},
 
-            // Panel 3 — FMLC / Flowprint / raw_score
-            yaxis3: {{
-                title: 'Metrics (0–10)',
-                gridcolor: '#1e222b', linecolor: '#1e222b', tickcolor: '#1e222b',
-                tickfont: {{ color: '#94a3b8' }},
-                domain: [0.22, 0.39],
-                range: [0, 10],
-                fixedrange: true
-            }},
-
-            // Panel 4 — Range / Vol %
+            // Bottom panel \u2014 Range / Vol %
             yaxis4: {{
                 title: 'Range / Vol %',
                 gridcolor: '#1e222b', linecolor: '#1e222b', tickcolor: '#1e222b',
-                tickfont: {{ color: '#94a3b8' }},
-                domain: [0.0, 0.18]
+                tickfont: {{ color: '#64748b' }},
+                domain: [0.0, 0.20]
             }},
 
-            margin: {{ t: 48, b: 28, l: 68, r: 55 }},
+            margin: {{ t: 46, b: 26, l: 72, r: 78 }},
             showlegend: true,
             legend: {{
                 x: 0, y: 1.055,
@@ -714,15 +786,15 @@ def generate_symbol_page(symbol, all_symbols, metadata):
                     xref: 'paper', yref: 'paper',
                     x: 1.0, y: 1.038,
                     xanchor: 'right', yanchor: 'bottom',
-                    text: 'Cell 1 partial reconstruction · Approved sandbox defaults · Research only',
+                    text: 'Cell 1 partial reconstruction \u00b7 Approved sandbox defaults \u00b7 Research only',
                     showarrow: false,
                     font: {{ size: 9, color: '#475569', family: 'Inter, sans-serif' }}
                 }},
                 {{
                     xref: 'paper', yref: 'paper',
-                    x: 0, y: 0.595,
+                    x: 0, y: 0.395,
                     xanchor: 'left', yanchor: 'bottom',
-                    text: 'ER — Expansion Readiness  |  bars  |  0–10',
+                    text: 'ER \u2014 Expansion Readiness  |  bars  |  0\u201310',
                     showarrow: false,
                     font: {{ size: 9, color: '#f59e0b', family: 'Inter, sans-serif' }}
                 }}
@@ -746,7 +818,11 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             const fmt = (v, d=4) => (v !== undefined && v !== null) ? (+v).toFixed(d) : 'N/A';
             const readout = document.getElementById('hoverReadout');
             readout.innerHTML =
-                `[UTC: ${{dateStr}}] &nbsp;|&nbsp; Price: ${{fmt(price)}} &nbsp;|&nbsp; Range: ${{fmt(rng,3)}}% &nbsp;|&nbsp; RVol: ${{fmt(rv,3)}}% &nbsp;|&nbsp;&nbsp;<b style="color:#f59e0b">ER: ${{fmt(erVal,2)}}</b> &nbsp;|&nbsp; <b style="color:#ef4444">FMLC: ${{fmt(fmlcVal,2)}}</b> &nbsp;|&nbsp; <b style="color:#10b981">FP: ${{fmt(fpVal,2)}}</b> &nbsp;|&nbsp; <b style="color:#a855f7">Score: ${{fmt(rawVal,2)}}</b>`;
+                `[UTC: ${{dateStr}}] &nbsp;|&nbsp; Price: ${{fmt(price)}} &nbsp;|&nbsp; Range: ${{fmt(rng,3)}}% &nbsp;|&nbsp; RVol: ${{fmt(rv,3)}}%` +
+                ` &nbsp;||&nbsp; <b style="color:#f59e0b">ER: ${{fmt(erVal,2)}}</b>` +
+                ` &nbsp;|&nbsp; <b style="color:#ef4444">FMLC: ${{fmt(fmlcVal,2)}}</b>` +
+                ` &nbsp;|&nbsp; <b style="color:#34d399">FP: ${{fmt(fpVal,2)}}</b>` +
+                ` &nbsp;|&nbsp; <b style="color:#a78bfa">Score: ${{fmt(rawVal,2)}}</b>`;
         }});
     </script>
 </body>
