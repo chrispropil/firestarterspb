@@ -7802,7 +7802,13 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="Matrix-Alpha-//-Firestarter-SPB">Matrix Alpha // Firestarter SPB<a class="anchor-link" href="#Matrix-Alpha-//-Firestarter-SPB">¶</a></h1><h2 id="Firestarter-Style-Top-100-Multi-Panel-Chart-Viewer">Firestarter-Style Top 100 Multi-Panel Chart Viewer<a class="anchor-link" href="#Firestarter-Style-Top-100-Multi-Panel-Chart-Viewer">¶</a></h2><blockquote>
+<h1 id="Matrix-Alpha-//-Firestarter-SPB">Matrix Alpha // Firestarter SPB<a class="anchor-link" href="#Matrix-Alpha-//-Firestarter-SPB">¶</a></h1><h2 id="Firestarter-Style-Top-100-Multi-Panel-Chart-Viewer">Firestarter-Style Top 100 Multi-Panel Chart Viewer<a class="anchor-link" href="#Firestarter-Style-Top-100-Multi-Panel-Chart-Viewer">¶</a></h2><hr/>
+<h3 id="How-to-Run-the-Notebook:">How to Run the Notebook:<a class="anchor-link" href="#How-to-Run-the-Notebook:">¶</a></h3><ol>
+<li>In the Jupyter menu bar, click <strong>Run</strong> -&gt; <strong>Run All Cells</strong>.</li>
+<li>Scroll down to see the rendered inventory table, statistical analysis, and 4-panel visual charts.</li>
+</ol>
+<hr/>
+<blockquote>
 <p><strong>[IMPORTANT] WARNINGS &amp; CONSTRAINTS</strong></p>
 <ul>
 <li><strong>Research Viewer Only:</strong> This notebook is strictly for offline inspection, profiling, and quality validation of the ingested dataset.</li>
@@ -7830,6 +7836,9 @@ a.anchor-link {
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timezone</span>
+
+<span class="c1"># Ensure charts render inline</span>
+<span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>
 
 <span class="c1"># Set styling for premium visual feel</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">'seaborn-v0_8-whitegrid'</span> <span class="k">if</span> <span class="s1">'seaborn-v0_8-whitegrid'</span> <span class="ow">in</span> <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">available</span> <span class="k">else</span> <span class="s1">'default'</span><span class="p">)</span>
@@ -7917,7 +7926,7 @@ Custom Window: Start=None, End=None
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="1.-Ingested-Dataset-Inventory-Audit">1. Ingested Dataset Inventory Audit<a class="anchor-link" href="#1.-Ingested-Dataset-Inventory-Audit">¶</a></h3><p>We scan the target directory to verify the data integrity of all 100 symbols.</p>
+<h3 id="Section-1:-Ingested-Dataset-Inventory-Audit">Section 1: Ingested Dataset Inventory Audit<a class="anchor-link" href="#Section-1:-Ingested-Dataset-Inventory-Audit">¶</a></h3><p>We scan the target directory to verify the data integrity of all 100 symbols.</p>
 </div>
 </div>
 </div>
@@ -8170,7 +8179,7 @@ Custom Window: Start=None, End=None
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="2.-Selected-Symbol-Detailed-Profiling-&amp;-Data-Loading">2. Selected Symbol Detailed Profiling &amp; Data Loading<a class="anchor-link" href="#2.-Selected-Symbol-Detailed-Profiling-&amp;-Data-Loading">¶</a></h3>
+<h3 id="Section-2:-Selected-Symbol-Detailed-Profiling-&amp;-Data-Loading">Section 2: Selected Symbol Detailed Profiling &amp; Data Loading<a class="anchor-link" href="#Section-2:-Selected-Symbol-Detailed-Profiling-&amp;-Data-Loading">¶</a></h3>
 </div>
 </div>
 </div>
@@ -8617,7 +8626,7 @@ Custom Window: Start=None, End=None
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="3.-Numeric-Summary-Statistics-&amp;-Volatility-Slicing">3. Numeric Summary Statistics &amp; Volatility Slicing<a class="anchor-link" href="#3.-Numeric-Summary-Statistics-&amp;-Volatility-Slicing">¶</a></h3>
+<h3 id="Section-3:-Numeric-Summary-Statistics-&amp;-Volatility-Slicing">Section 3: Numeric Summary Statistics &amp; Volatility Slicing<a class="anchor-link" href="#Section-3:-Numeric-Summary-Statistics-&amp;-Volatility-Slicing">¶</a></h3>
 </div>
 </div>
 </div>
@@ -8688,7 +8697,7 @@ Max Candle Range (% of Open): 2.1984
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="4.-Multi-Scale-Timeframe-Aggregation-(1h-and-4h)">4. Multi-Scale Timeframe Aggregation (1h and 4h)<a class="anchor-link" href="#4.-Multi-Scale-Timeframe-Aggregation-(1h-and-4h)">¶</a></h3><p>We resample the 5-minute ticks to 1-hour and 4-hour aggregates and construct summary tables.</p>
+<h3 id="Section-4:-Multi-Scale-Timeframe-Aggregation-(1h-and-4h)">Section 4: Multi-Scale Timeframe Aggregation (1h and 4h)<a class="anchor-link" href="#Section-4:-Multi-Scale-Timeframe-Aggregation-(1h-and-4h)">¶</a></h3><p>We resample the 5-minute ticks to 1-hour and 4-hour aggregates and construct summary tables.</p>
 </div>
 </div>
 </div>
@@ -8795,7 +8804,7 @@ max          8.739853e+09  3.096867e+06
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="5.-Firestarter-Style-Multi-Panel-Visualization">5. Firestarter-Style Multi-Panel Visualization<a class="anchor-link" href="#5.-Firestarter-Style-Multi-Panel-Visualization">¶</a></h3><p>We construct a 4-panel visual replay sheet showing Close Price with trend lines, color-coded volume, high-low range %, and rolling volatility.</p>
+<h3 id="Section-5:-Firestarter-Style-Multi-Panel-Visualization">Section 5: Firestarter-Style Multi-Panel Visualization<a class="anchor-link" href="#Section-5:-Firestarter-Style-Multi-Panel-Visualization">¶</a></h3><p>We construct a 4-panel visual replay sheet showing Close Price with trend lines, color-coded volume, high-low range %, and rolling volatility.</p>
 </div>
 </div>
 </div>
