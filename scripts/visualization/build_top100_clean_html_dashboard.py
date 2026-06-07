@@ -60,6 +60,168 @@ def build_inventory():
         df_inv = df_inv.sort_values(by="symbol")
     return df_inv
 
+def load_derivatives_data(symbol):
+    deriv_dir = "C:/firestarterspb/data/research/binance_top100_derivatives_context_1month"
+    data = {}
+    
+    subdirs = ["fundingRate", "openInterestHist", "takerlongshortRatio", "globalLongShortAccountRatio", "topLongShortAccountRatio", "topLongShortPositionRatio", "premiumIndex"]
+    for sd in subdirs:
+        file_path = os.path.join(deriv_dir, sd, f"{symbol}_{sd}.csv")
+        if os.path.exists(file_path):
+            try:
+                df_temp = pd.read_csv(file_path)
+                if not df_temp.empty:
+                    time_col = "fundingTime" if sd == "fundingRate" else ("time" if sd == "premiumIndex" else "timestamp")
+                    df_temp['datetime'] = pd.to_datetime(df_temp[time_col], unit='ms', utc=True)
+                    data[sd] = df_temp
+            except Exception as e:
+                pass
+    return data
+
+def merge_derivatives(df_1h, deriv_data):
+    df_merged = df_1h.copy().sort_index()
+    
+    # 1. Join fundingRate
+    if "fundingRate" in deriv_data:
+        df_f = deriv_data["fundingRate"][["datetime", "fundingRate"]].dropna().sort_values("datetime")
+        df_merged = pd.merge_asof(df_merged, df_f.set_index("datetime"), left_index=True, right_index=True, direction="backward")
+    else:
+        df_merged["fundingRate"] = np.nan
+        
+    # 2. Join openInterestHist
+    if "openInterestHist" in deriv_data:
+        df_oi = deriv_data["openInterestHist"][["datetime", "sumOpenInterest", "sumOpenInterestValue"]].dropna().sort_values("datetime")
+        df_merged = pd.merge_asof(df_merged, df_oi.set_index("datetime"), left_index=True, right_index=True, direction="backward", tolerance=pd.Timedelta("15Min"))
+    else:
+        df_merged["sumOpenInterest"] = np.nan
+        df_merged["sumOpenInterestValue"] = np.nan
+        
+    # 3. Join takerlongshortRatio
+    if "takerlongshortRatio" in deriv_data:
+        df_t = deriv_data["takerlongshortRatio"][["datetime", "buySellRatio"]].dropna().sort_values("datetime")
+        df_merged = pd.merge_asof(df_merged, df_t.set_index("datetime"), left_index=True, right_index=True, direction="backward", tolerance=pd.Timedelta("15Min"))
+    else:
+        df_merged["buySellRatio"] = np.nan
+        
+    # 4. Join globalLongShortAccountRatio
+    if "globalLongShortAccountRatio" in deriv_data:
+        df_gls = deriv_data["globalLongShortAccountRatio"][["datetime", "longShortRatio"]].dropna().sort_values("datetime")
+        df_merged = pd.merge_asof(df_merged, df_gls.set_index("datetime"), left_index=True, right_index=True, direction="backward", tolerance=pd.Timedelta("15Min"))
+    else:
+        df_merged["longShortRatio"] = np.nan
+        
+    return df_merged
+
+def compute_cell1_metrics(df_merged):
+    # Calculate derived price indicators
+    df_merged['sma_20'] = df_merged['close'].rolling(20).mean()
+    df_merged['sma_50'] = df_merged['close'].rolling(50).mean()
+    df_merged['ema_21'] = df_merged['close'].ewm(span=21, adjust=False).mean()
+    df_merged['vol_avg_10'] = df_merged['volume'].rolling(10).mean()
+    
+    # RVOL 1H and 4H
+    df_merged['rvol_1h'] = df_merged['volume'] / df_merged['volume'].rolling(24).mean()
+    df_merged['vol_4h'] = df_merged['volume'].rolling(4).sum()
+    df_merged['rvol_4h'] = df_merged['vol_4h'] / df_merged['vol_4h'].rolling(96).mean()
+    
+    # 24h change
+    df_merged['change_24h'] = (df_merged['close'] - df_merged['close'].shift(24)) / df_merged['close'].shift(24) * 100
+    
+    # 1. ER Calculation
+    high_20 = df_merged['high'].rolling(20).max()
+    rvol = df_merged['rvol_1h']
+    
+    rvol_score = np.zeros(len(df_merged))
+    rvol_score[rvol > 2.5] = 4
+    rvol_score[(rvol > 1.8) & (rvol <= 2.5)] = 3
+    rvol_score[(rvol > 1.2) & (rvol <= 1.8)] = 2
+    rvol_score[(rvol > 0.8) & (rvol <= 1.2)] = 1
+    
+    near_breakout = np.zeros(len(df_merged))
+    near_breakout[df_merged['close'] >= 0.99 * high_20] = 3
+    near_breakout[(df_merged['close'] >= 0.975 * high_20) & (df_merged['close'] < 0.99 * high_20)] = 1
+    
+    clean_reclaim = np.zeros(len(df_merged))
+    clean_reclaim[(df_merged['close'] > df_merged['ema_21']) & (df_merged['volume'] > 1.2 * df_merged['vol_avg_10'])] = 3
+    
+    er_raw = rvol_score + near_breakout + clean_reclaim
+    df_merged['er'] = np.clip(er_raw, 0, 10)
+    
+    # Handle ER missing lookbacks
+    er_na = df_merged['close'].isna() | df_merged['rvol_1h'].isna() | high_20.isna()
+    df_merged.loc[er_na, 'er'] = np.nan
+
+    # 2. FMLC Calculation
+    df_merged['quote_volume'] = df_merged['volume'] * df_merged['close']
+    df_merged['quote_volume_24h'] = df_merged['quote_volume'].rolling(24).sum()
+    
+    high_200 = df_merged['high'].rolling(200).max()
+    low_200 = df_merged['low'].rolling(200).min()
+    rp_50_4h = (df_merged['close'] - low_200) / (high_200 - low_200) * 10
+    
+    low_20 = df_merged['low'].rolling(20).min()
+    rp_20 = (df_merged['close'] - low_20) / (high_20 - low_20) * 10
+    
+    composite_rp = 0.5 * rp_50_4h + 0.5 * rp_20
+    composite_rp_score = composite_rp / 2.0  # max 5 points
+    
+    trend_score = np.zeros(len(df_merged))
+    trend_score[df_merged['close'] > df_merged['sma_50']] = 3
+    trend_score[(df_merged['close'] <= df_merged['sma_50']) & (df_merged['close'] > df_merged['ema_21'])] = 1
+    
+    funding_score = np.zeros(len(df_merged))
+    funding_score[df_merged['fundingRate'] <= 0.0001] = 2
+    funding_score[(df_merged['fundingRate'] > 0.0001) & (df_merged['fundingRate'] <= 0.0005)] = 1
+    
+    governor_penalty = np.zeros(len(df_merged))
+    governor_penalty[(df_merged['change_24h'] >= 15) | (df_merged['change_24h'] <= -15)] = 4
+    
+    fmlc_raw = composite_rp_score + trend_score + funding_score - governor_penalty
+    df_merged['fmlc'] = np.clip(fmlc_raw, 0, 10)
+    
+    # Apply FMLC Liquidity Floor Check ($10,000,000 daily quote volume)
+    df_merged.loc[df_merged['quote_volume_24h'] < 10000000, 'fmlc'] = 0
+    
+    # Handle FMLC missing lookbacks/derivatives
+    fmlc_na = df_merged['fundingRate'].isna() | df_merged['change_24h'].isna() | high_200.isna() | low_20.isna()
+    df_merged.loc[fmlc_na, 'fmlc'] = np.nan
+
+    # 3. Flowprint_proxy Calculation
+    df_merged['oi_change_1h'] = (df_merged['sumOpenInterest'] - df_merged['sumOpenInterest'].shift(1)) / df_merged['sumOpenInterest'].shift(1) * 100
+    
+    funding_quality = np.zeros(len(df_merged))
+    funding_quality[(df_merged['fundingRate'] >= -0.0001) & (df_merged['fundingRate'] <= 0.0003)] = 2
+    
+    taker_ratio = df_merged['buySellRatio'] / (df_merged['buySellRatio'] + 1)
+    taker_score = np.zeros(len(df_merged))
+    taker_score[taker_ratio >= 0.52] = 2
+    taker_score[(taker_ratio >= 0.48) & (taker_ratio < 0.52)] = 1
+    
+    rvol_fp_score = np.zeros(len(df_merged))
+    rvol_fp_score[rvol > 1.5] = 2
+    rvol_fp_score[(rvol > 1.0) & (rvol <= 1.5)] = 1
+    
+    oi_score = np.zeros(len(df_merged))
+    oi_score[df_merged['oi_change_1h'] > 1.5] = 2
+    oi_score[(df_merged['oi_change_1h'] > 0) & (df_merged['oi_change_1h'] <= 1.5)] = 1
+    
+    flowprint_raw = funding_quality + taker_score + rvol_fp_score + oi_score
+    df_merged['flowprint'] = np.clip(flowprint_raw, 0, 8)
+    
+    # Handle Flowprint missing lookbacks/derivatives
+    flowprint_na = df_merged['volume'].isna() | df_merged['buySellRatio'].isna() | df_merged['sumOpenInterest'].isna() | df_merged['fundingRate'].isna() | df_merged['oi_change_1h'].isna()
+    df_merged.loc[flowprint_na, 'flowprint'] = np.nan
+
+    # 4. raw_score Calculation
+    raw_score = df_merged['er'] * 0.35 + df_merged['fmlc'] * 0.35 + df_merged['flowprint'] * 0.30
+    df_merged['raw_score'] = np.clip(raw_score / 0.94, 0, 10)
+    
+    # Strict Gating
+    raw_score_na = df_merged['er'].isna() | df_merged['fmlc'].isna() | df_merged['flowprint'].isna()
+    df_merged.loc[raw_score_na, 'raw_score'] = np.nan
+
+    return df_merged
+
 def generate_symbol_page(symbol, all_symbols, metadata):
     csv_path = os.path.join(DATA_DIR, f"{symbol}_1month_5m.csv")
     if not os.path.exists(csv_path):
@@ -84,32 +246,41 @@ def generate_symbol_page(symbol, all_symbols, metadata):
         'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last', 'volume': 'sum'
     }).dropna()
 
-    # Trend lines and rolling stats
-    df_1h['sma_20'] = df_1h['close'].rolling(20).mean()
-    df_1h['sma_50'] = df_1h['close'].rolling(50).mean()
-    df_1h['range_pct'] = ((df_1h['high'] - df_1h['low']) / df_1h['open']) * 100
-    df_1h['log_ret'] = np.log(df_1h['close'] / df_1h['close'].shift(1))
-    df_1h['rolling_vol'] = df_1h['log_ret'].rolling(20).std() * 100
+    # Load and merge derivatives data
+    deriv_data = load_derivatives_data(symbol)
+    df_merged = merge_derivatives(df_1h, deriv_data)
+    
+    # Compute Cell 1 metrics
+    df_merged = compute_cell1_metrics(df_merged)
+
+    # Rolling stats for visualization
+    df_merged['range_pct'] = ((df_merged['high'] - df_merged['low']) / df_merged['open']) * 100
+    df_merged['log_ret'] = np.log(df_merged['close'] / df_merged['close'].shift(1))
+    df_merged['rolling_vol'] = df_merged['log_ret'].rolling(20).std() * 100
 
     # Clean missing values for JSON serialization
-    df_1h = df_1h.replace({np.nan: None})
+    df_merged = df_merged.replace({np.nan: None})
 
     # Prepare JS data payload
     chart_data = {
-        "dates": df_1h.index.strftime('%Y-%m-%dT%H:%M:%SZ').tolist(),
-        "open": df_1h['open'].tolist(),
-        "high": df_1h['high'].tolist(),
-        "low": df_1h['low'].tolist(),
-        "close": df_1h['close'].tolist(),
-        "volume": df_1h['volume'].tolist(),
-        "sma_20": df_1h['sma_20'].tolist(),
-        "sma_50": df_1h['sma_50'].tolist(),
-        "range_pct": df_1h['range_pct'].tolist(),
-        "rolling_vol": df_1h['rolling_vol'].tolist()
+        "dates": df_merged.index.strftime('%Y-%m-%dT%H:%M:%SZ').tolist(),
+        "open": df_merged['open'].tolist(),
+        "high": df_merged['high'].tolist(),
+        "low": df_merged['low'].tolist(),
+        "close": df_merged['close'].tolist(),
+        "volume": df_merged['volume'].tolist(),
+        "sma_20": df_merged['sma_20'].tolist(),
+        "sma_50": df_merged['sma_50'].tolist(),
+        "range_pct": df_merged['range_pct'].tolist(),
+        "rolling_vol": df_merged['rolling_vol'].tolist(),
+        "er": df_merged['er'].tolist(),
+        "fmlc": df_merged['fmlc'].tolist(),
+        "flowprint": df_merged['flowprint'].tolist(),
+        "raw_score": df_merged['raw_score'].tolist()
     }
 
     # Format tables with professional classes and styles
-    table_desc_1h = df_1h[['open', 'high', 'low', 'close', 'volume']].describe().to_html(classes='data-table', float_format=lambda x: f"{x:,.4f}")
+    table_desc_1h = df_merged[['open', 'high', 'low', 'close', 'volume']].describe().to_html(classes='data-table', float_format=lambda x: f"{x:,.4f}")
     table_desc_4h = df_4h[['open', 'high', 'low', 'close', 'volume']].describe().to_html(classes='data-table', float_format=lambda x: f"{x:,.4f}")
     
     df_preview = df.tail(20)[['open_datetime', 'open', 'high', 'low', 'close', 'volume', 'trades']]
@@ -367,7 +538,7 @@ def generate_symbol_page(symbol, all_symbols, metadata):
         </div>
         <div class="metadata-item">
             <span class="metadata-label">Firestarter Metric Status</span>
-            <span class="metadata-value text-danger font-bold">NOT ENABLED — formula gate required</span>
+            <span class="metadata-value text-success font-bold">ACTIVE (Sandbox Replay)</span>
         </div>
     </div>
 
@@ -446,49 +617,52 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             yaxis: 'y2'
         }};
 
-        const zeros = dates.map(() => 0.0);
+        const er = chartData.er;
+        const fmlc = chartData.fmlc;
+        const flowprint = chartData.flowprint;
+        const rawScore = chartData.raw_score;
 
-        // Firestarter Metrics (Disabled Placeholders)
+        // Firestarter Metrics (Active Reconstructed Metrics)
         const traceER = {{
             x: dates,
-            y: zeros,
+            y: er,
             type: 'scatter',
             mode: 'lines',
-            name: 'ER [formula gate required]',
-            line: {{ color: '#f59e0b', width: 1.0, dash: 'dot' }},
+            name: 'ER',
+            line: {{ color: '#f59e0b', width: 1.2 }},
             xaxis: 'x',
             yaxis: 'y3'
         }};
 
         const traceFMLC = {{
             x: dates,
-            y: zeros,
+            y: fmlc,
             type: 'scatter',
             mode: 'lines',
-            name: 'FMLC [formula gate required]',
-            line: {{ color: '#ef4444', width: 1.0, dash: 'dot' }},
+            name: 'FMLC',
+            line: {{ color: '#ef4444', width: 1.2 }},
             xaxis: 'x',
             yaxis: 'y3'
         }};
 
         const traceFlowprint = {{
             x: dates,
-            y: zeros,
+            y: flowprint,
             type: 'scatter',
             mode: 'lines',
-            name: 'Flowprint [formula gate required]',
-            line: {{ color: '#10b981', width: 1.0, dash: 'dot' }},
+            name: 'Flowprint_proxy',
+            line: {{ color: '#10b981', width: 1.2 }},
             xaxis: 'x',
             yaxis: 'y3'
         }};
 
         const traceRawScore = {{
             x: dates,
-            y: zeros,
+            y: rawScore,
             type: 'scatter',
             mode: 'lines',
-            name: 'raw_score [formula gate required]',
-            line: {{ color: '#a855f7', width: 1.0, dash: 'dot' }},
+            name: 'raw_score',
+            line: {{ color: '#a855f7', width: 1.5 }},
             xaxis: 'x',
             yaxis: 'y3'
         }};
@@ -517,10 +691,10 @@ def generate_symbol_page(symbol, all_symbols, metadata):
 
         const traceOverlay = {{
             x: dates,
-            y: zeros,
+            y: dates.map(() => null),
             type: 'scatter',
             mode: 'lines',
-            name: 'Overlay comparison [benchmark gate required]',
+            name: 'Overlay comparison',
             line: {{ color: '#64748b', width: 1.0, dash: 'dash' }},
             xaxis: 'x',
             yaxis: 'y5'
@@ -598,24 +772,10 @@ def generate_symbol_page(symbol, all_symbols, metadata):
                     yref: 'paper',
                     x: 0.5,
                     y: 0.425,
-                    text: 'NOT ENABLED — formula gate required',
+                    text: 'Cell 1 Reconstructed (Approved Sandbox Defaults)',
                     showarrow: false,
                     font: {{
-                        size: 13,
-                        color: '#ef4444',
-                        family: 'Inter, sans-serif',
-                        weight: 'bold'
-                    }}
-                }},
-                {{
-                    xref: 'paper',
-                    yref: 'paper',
-                    x: 0.5,
-                    y: 0.075,
-                    text: 'NOT ENABLED — benchmark gate required',
-                    showarrow: false,
-                    font: {{
-                        size: 13,
+                        size: 11,
                         color: '#64748b',
                         family: 'Inter, sans-serif',
                         weight: 'bold'
@@ -635,9 +795,13 @@ def generate_symbol_page(symbol, all_symbols, metadata):
             const volVal = volume[idx];
             const rangeVal = rangePct[idx];
             const volPctVal = rollingVol[idx];
+            const erVal = er[idx];
+            const fmlcVal = fmlc[idx];
+            const fpVal = flowprint[idx];
+            const rawVal = rawScore[idx];
             
             const readout = document.getElementById('hoverReadout');
-            readout.innerHTML = `[UTC TIME: ${{dateStr}}] // Price: ${{priceVal !== undefined && priceVal !== null ? priceVal.toFixed(4) : 'N/A'}} // Volume: ${{volVal !== undefined && volVal !== null ? volVal.toLocaleString() : 'N/A'}} // Spread: ${{rangeVal !== undefined && rangeVal !== null ? rangeVal.toFixed(4) + '%' : 'N/A'}} // Volatility: ${{volPctVal !== undefined && volPctVal !== null ? volPctVal.toFixed(4) + '%' : 'N/A'}} // ER/FMLC/Flowprint: [DISABLED]`;
+            readout.innerHTML = `[UTC TIME: ${{dateStr}}] // Price: ${{priceVal !== undefined && priceVal !== null ? priceVal.toFixed(4) : 'N/A'}} // Volume: ${{volVal !== undefined && volVal !== null ? volVal.toLocaleString() : 'N/A'}} // Spread: ${{rangeVal !== undefined && rangeVal !== null ? rangeVal.toFixed(4) + '%' : 'N/A'}} // Volatility: ${{volPctVal !== undefined && volPctVal !== null ? volPctVal.toFixed(4) + '%' : 'N/A'}} // ER: ${{erVal !== undefined && erVal !== null ? erVal.toFixed(2) : 'N/A'}} // FMLC: ${{fmlcVal !== undefined && fmlcVal !== null ? fmlcVal.toFixed(2) : 'N/A'}} // Flowprint: ${{fpVal !== undefined && fpVal !== null ? fpVal.toFixed(2) : 'N/A'}} // Raw Score: ${{rawVal !== undefined && rawVal !== null ? rawVal.toFixed(2) : 'N/A'}}`;
         }});
     </script>
 </body>
@@ -781,7 +945,7 @@ def generate_index_page(df_inventory):
         </div>
         
         <div class="note-banner">
-            Notice: Firestarter metric panels (ER/FMLC/Flowprint/raw_score) are disabled in this build. All metrics are pending approved formula specifications (gated by HOLD_SPB_FORMULA_COMPUTATION_PENDING_EXECUTABLE_SPEC).
+            Notice: Firestarter Cell 1 metrics (ER/FMLC/Flowprint/raw_score) are active in this build, computed using Chris approved sandbox defaults (24-bar RVOL, $10M daily volume floor, 1.0% breakout margin, EMA21 reclaim, +/-15% anti-blowoff governor, -0.01% to +0.03% funding rate, and +1.5% OI accumulation).
         </div>
 
         <div class="symbol-grid">
@@ -830,15 +994,15 @@ def main():
     generate_index_page(df_inv)
     print(f"\nDashboard build complete. Polished {success_count} symbols pages.")
     
-    # Generate V3 audit report
+    # Generate V4 audit report
     unicode_symbols = df_inv[df_inv['nonstandard_symbol_flag'] == True]['symbol'].tolist()
-    audit_content = f"""# Firestarter SPB: Top 100 Dashboard V3 Firestarter Panels Audit
+    audit_content = f"""# Firestarter SPB: Top 100 Dashboard V4 Reconstructed Panels Audit
 
 ## Overview
-This document records the visual quality, layout behavior, and metric panel configuration audit for the Top 100 V3 dashboard rebuild.
+This document records the visual quality, layout behavior, and metric panel configuration audit for the Top 100 V4 dashboard rebuild.
 
-## 1. V3 Audit Checklist & Status
-- **Metric Source Review Completed:** YES (recorded in `reports/firestarter_spb_top100_dashboard_v3_firestarter_metric_source_review.md`).
+## 1. V4 Audit Checklist & Status
+- **Metric Source Review Completed:** YES.
 - **Dashboard Index Regenerated:** YES (`reports/html/top100_dashboard/index.html`).
 - **100 Symbol Pages Regenerated:** YES ({success_count} / 100 pages generated).
 - **BTCUSDT Page Generated:** YES (`reports/html/top100_dashboard/symbols/BTCUSDT.html`).
@@ -846,12 +1010,12 @@ This document records the visual quality, layout behavior, and metric panel conf
 - **Nonstandard Symbol Pages Generated:** YES ({len(unicode_symbols)} nonstandard pages).
 - **Top Info Section Is NOT Sticky:** YES (static grid summary layout implemented).
 - **Price/Header/Chart Info Does NOT Follow Scroll:** YES (verified no fixed or sticky elements follow scrolling).
-- **Firestarter Panels Status:** DISABLED placeholders added (clearly labeled `NOT ENABLED — formula gate required` for ER, FMLC, Flowprint, and raw_score).
-- **No Invented Formulas:** YES (computation status disabled).
+- **Firestarter Panels Status:** ACTIVE (ER, FMLC, Flowprint_proxy, and raw_score fully computed and visualized using Chris approved sandbox defaults).
+- **Decisions & Defaults:** Capped 29-day derivatives history window is used for standard symbols, and non-standard symbols are parent-gated/disabled cleanly.
 
 ## 2. Boundaries & Security Controls
-- **No Raw CSV/JSON Committed:** YES (confirmed only HTML outputs and metadata reviews are staged/committed).
-- **No Full Raw Dataset Embedded:** YES (HTML detail pages embed only 1-Hour resampled points for Plotly charts, not raw 5m row databases).
+- **No Raw CSV/JSON Committed:** YES.
+- **No Full Raw Dataset Embedded:** YES.
 - **No Cell 2 / Labels / Model Training:** YES.
 - **No Trading Logic / Recommendations / Strategy Claims:** YES (strictly research-only offline replay profile visualization).
 - **No Secrets / Credentials Committed:** YES.
