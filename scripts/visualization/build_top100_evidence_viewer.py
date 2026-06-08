@@ -334,6 +334,33 @@ def main():
             border-color: #3b82f6;
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }}
+        .metric-cards {{
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }}
+        .metric-card {{
+            flex: 1;
+            background: #ffffff;
+            border: 1px solid #dbeafe;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05); 
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }}
+        .mc-label {{
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #64748b;
+        }}
+        .mc-value {{
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+        }}
         #chart {{ 
             background: #ffffff; 
             border-radius: 8px; 
@@ -355,10 +382,31 @@ def main():
                 <span id="regimeIndicator" style="font-weight: bold; padding: 5px 10px; border-radius: 3px;"></span>
             </div>
         </div>
-        <div id="hoverReadout" style="margin-top: 15px; padding: 12px; background: #f0f7ff; border: 1px solid #bfdbfe; border-radius: 6px; font-family: monospace; font-size: 14px; color: #1e3a8a;">
-            Hover over the chart to view exact metrics.
+    </div>
+    
+    <div class="metric-cards">
+        <div class="metric-card" style="border-left: 4px solid darkred;">
+            <span class="mc-label">ER (Latest)</span>
+            <span class="mc-value" id="cardER">N/A</span>
+        </div>
+        <div class="metric-card" style="border-left: 4px solid purple;">
+            <span class="mc-label">FMLC (Latest)</span>
+            <span class="mc-value" id="cardFMLC">N/A</span>
+        </div>
+        <div class="metric-card" style="border-left: 4px solid orange;">
+            <span class="mc-label">Flowprint (Latest)</span>
+            <span class="mc-value" id="cardFlowprint">N/A</span>
+        </div>
+        <div class="metric-card" style="border-left: 4px solid gray;">
+            <span class="mc-label">Score (Latest)</span>
+            <span class="mc-value" id="cardScore">N/A</span>
         </div>
     </div>
+
+    <div id="hoverReadout" style="margin-bottom: 20px; padding: 12px; background: #f0f7ff; border: 1px solid #bfdbfe; border-radius: 6px; font-family: monospace; font-size: 14px; color: #1e3a8a;">
+        Hover over the chart to view exact metrics.
+    </div>
+
     <div id="chart"></div>
     
     <script>
@@ -406,7 +454,6 @@ def main():
                 height: 800,
                 paper_bgcolor: '#ffffff',
                 plot_bgcolor: '#f8fafc',
-                grid: {{rows: 3, columns: 1, pattern: 'independent'}},
                 xaxis: {{
                     title: {{ text: 'Timestamp UTC', font: {{ color: '#475569' }} }},
                     tickfont: {{ color: '#475569' }},
@@ -427,13 +474,19 @@ def main():
                     title: {{ text: 'Score/Metric', font: {{ color: '#475569' }} }},
                     tickfont: {{ color: '#475569' }},
                     gridcolor: '#e2e8f0',
-                    domain: [0.3, 0.55]
+                    domain: [0.3, 0.55],
+                    range: [0, 10],
+                    fixedrange: true,
+                    anchor: 'x'
                 }},
                 yaxis3: {{
                     title: {{ text: 'Evidence Ratio (ER)', font: {{ color: '#475569' }} }},
                     tickfont: {{ color: '#475569' }},
                     gridcolor: '#e2e8f0',
-                    domain: [0, 0.25]
+                    domain: [0, 0.25],
+                    range: [0, 10],
+                    fixedrange: true,
+                    anchor: 'x'
                 }},
                 hovermode: 'x',
                 showlegend: true,
@@ -463,6 +516,24 @@ def main():
                                          <strong>Score:</strong> ${{score !== null ? score.toFixed(2) : 'N/A'}}`;
                 }}
             }});
+            
+            // Update top cards with latest values
+            let latestER = "N/A";
+            let latestFMLC = "N/A";
+            let latestFP = "N/A";
+            let latestScore = "N/A";
+            
+            for (let i = sd.time.length - 1; i >= 0; i--) {{
+                if (latestER === "N/A" && sd.er[i] !== null) latestER = sd.er[i].toFixed(2);
+                if (latestFMLC === "N/A" && sd.fmlc[i] !== null) latestFMLC = sd.fmlc[i].toFixed(2);
+                if (latestFP === "N/A" && sd.fp[i] !== null) latestFP = sd.fp[i].toFixed(2);
+                if (latestScore === "N/A" && sd.score[i] !== null) latestScore = sd.score[i].toFixed(2);
+            }}
+            
+            document.getElementById('cardER').innerText = latestER;
+            document.getElementById('cardFMLC').innerText = latestFMLC;
+            document.getElementById('cardFlowprint').innerText = latestFP;
+            document.getElementById('cardScore').innerText = latestScore;
             
             updateRegime();
         }}
