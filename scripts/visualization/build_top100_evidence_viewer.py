@@ -392,6 +392,31 @@ def main():
             padding: 15px;
             background: #ffffff;
         }}
+        .window-controls {{
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }}
+        .win-btn {{
+            background-color: #ffffff;
+            color: #1e293b;
+            border: 2px solid #000000;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.15s ease;
+        }}
+        .win-btn:hover {{
+            background-color: #f1f5f9;
+        }}
+        .win-btn.active {{
+            background-color: #000000;
+            color: #ffffff;
+            border-color: #000000;
+        }}
         .readout-box {{
             flex: 1;
             min-width: 140px;
@@ -482,6 +507,13 @@ def main():
             <span class="ro-label">Score</span>
             <span class="ro-value" id="roScore" style="color: #cbd5e1;">-</span>
         </div>
+    </div>
+
+    <div class="window-controls">
+        <button class="win-btn" onclick="setWindow(1)" id="btn-1d">1D</button>
+        <button class="win-btn" onclick="setWindow(3)" id="btn-3d">3D</button>
+        <button class="win-btn" onclick="setWindow(6)" id="btn-6d">6D</button>
+        <button class="win-btn" onclick="setWindow(0)" id="btn-full">Full</button>
     </div>
 
     <div id="chart"></div>
@@ -661,7 +693,48 @@ def main():
             document.getElementById('cardFlowprint').innerText = latestFP;
             document.getElementById('cardScore').innerText = latestScore;
             
+            applyWindow(currentWindowDays, sd);
             updateRegime();
+        }}
+        
+        let currentWindowDays = 3;
+
+        function applyWindow(days, sd) {{
+            const buttons = {{
+                1: 'btn-1d',
+                3: 'btn-3d',
+                6: 'btn-6d',
+                0: 'btn-full'
+            }};
+            Object.values(buttons).forEach(id => {{
+                const btn = document.getElementById(id);
+                if (btn) btn.classList.remove('active');
+            }});
+            const activeBtn = document.getElementById(buttons[days]);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            if (days === 0) {{
+                Plotly.relayout('chart', {{
+                    'xaxis.range': null,
+                    'xaxis.autorange': true
+                }});
+            }} else {{
+                const endStr = sd.time[sd.time.length - 1];
+                const endDate = new Date(endStr);
+                const startDate = new Date(endDate.getTime() - (days * 24 * 60 * 60 * 1000));
+                const startStr = startDate.toISOString().split('.')[0] + 'Z';
+                Plotly.relayout('chart', {{
+                    'xaxis.range': [startStr, endStr],
+                    'xaxis.autorange': false
+                }});
+            }}
+        }}
+
+        function setWindow(days) {{
+            currentWindowDays = days;
+            const symbol = document.getElementById('symbolSelect').value;
+            const sd = symbolsData[symbol];
+            if(sd) applyWindow(days, sd);
         }}
         
         const sel = document.getElementById('symbolSelect');
