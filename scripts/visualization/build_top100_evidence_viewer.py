@@ -338,35 +338,43 @@ def main():
             display: flex;
             gap: 15px;
             margin-bottom: 20px;
+            flex-wrap: wrap;
         }}
         .metric-card {{
             flex: 1;
+            min-width: 180px;
             background: #ffffff;
             border: 1px solid #dbeafe;
             border-radius: 8px;
-            padding: 15px;
+            padding: 20px 24px;
             box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05); 
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
+            min-height: 100px;
+            box-sizing: border-box;
+            justify-content: center;
         }}
         .mc-label {{
-            font-size: 11px;
+            font-size: 12px;
             text-transform: uppercase;
-            font-weight: 600;
+            font-weight: 700;
             color: #64748b;
+            letter-spacing: 0.05em;
         }}
         .mc-value {{
-            font-size: 24px;
-            font-weight: 700;
+            font-size: 32px;
+            font-weight: 800;
             color: #0f172a;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            line-height: 1;
         }}
         #chart {{ 
-            background: #ffffff; 
+            background: #18181b; 
             border-radius: 8px; 
-            box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05); 
-            padding: 15px; 
-            border: 1px solid #dbeafe;
+            box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -2px rgba(15, 23, 42, 0.1); 
+            padding: 20px; 
+            border: 1px solid #3f3f46;
         }}
     </style>
 </head>
@@ -385,19 +393,23 @@ def main():
     </div>
     
     <div class="metric-cards">
-        <div class="metric-card" style="border-left: 4px solid darkred;">
+        <div class="metric-card" style="border-left: 4px solid #3b82f6;">
+            <span class="mc-label">Price (Latest)</span>
+            <span class="mc-value" id="cardPrice">N/A</span>
+        </div>
+        <div class="metric-card" style="border-left: 4px solid #ef4444;">
             <span class="mc-label">ER (Latest)</span>
             <span class="mc-value" id="cardER">N/A</span>
         </div>
-        <div class="metric-card" style="border-left: 4px solid purple;">
+        <div class="metric-card" style="border-left: 4px solid #a855f7;">
             <span class="mc-label">FMLC (Latest)</span>
             <span class="mc-value" id="cardFMLC">N/A</span>
         </div>
-        <div class="metric-card" style="border-left: 4px solid orange;">
+        <div class="metric-card" style="border-left: 4px solid #f97316;">
             <span class="mc-label">Flowprint (Latest)</span>
             <span class="mc-value" id="cardFlowprint">N/A</span>
         </div>
-        <div class="metric-card" style="border-left: 4px solid gray;">
+        <div class="metric-card" style="border-left: 4px solid #64748b;">
             <span class="mc-label">Score (Latest)</span>
             <span class="mc-value" id="cardScore">N/A</span>
         </div>
@@ -426,11 +438,11 @@ def main():
             const sd = symbolsData[symbol];
             if(!sd) return;
             
-            const tracePrice = {{ x: sd.time, y: sd.price, name: 'Price', type: 'scatter', yaxis: 'y', hoverinfo: 'none' }};
-            const traceFMLC = {{ x: sd.time, y: sd.fmlc, name: 'FMLC', type: 'scatter', yaxis: 'y2', line: {{color: 'purple', width: 2}}, hoverinfo: 'none' }};
-            const traceFP = {{ x: sd.time, y: sd.fp, name: 'Flowprint', type: 'scatter', yaxis: 'y2', line: {{color: 'orange', width: 2}}, hoverinfo: 'none' }};
-            const traceER = {{ x: sd.time, y: sd.er, name: 'ER', type: 'bar', yaxis: 'y3', marker: {{color: 'darkred'}}, hoverinfo: 'none' }};
-            const traceScore = {{ x: sd.time, y: sd.score, name: 'Raw Score', type: 'scatter', yaxis: 'y2', line: {{color: 'gray', dash: 'dot', width: 1.5}}, hoverinfo: 'none' }};
+            const tracePrice = {{ x: sd.time, y: sd.price, name: 'Price', type: 'scatter', yaxis: 'y', line: {{color: '#60a5fa', width: 2.5}}, hoverinfo: 'none' }};
+            const traceFMLC = {{ x: sd.time, y: sd.fmlc, name: 'FMLC', type: 'scatter', yaxis: 'y2', line: {{color: '#c084fc', width: 2.5}}, hoverinfo: 'none' }};
+            const traceFP = {{ x: sd.time, y: sd.fp, name: 'Flowprint', type: 'scatter', yaxis: 'y2', line: {{color: '#fb923c', width: 2.5}}, hoverinfo: 'none' }};
+            const traceER = {{ x: sd.time, y: sd.er, name: 'ER', type: 'bar', yaxis: 'y3', marker: {{color: '#ef4444'}}, hoverinfo: 'none' }};
+            const traceScore = {{ x: sd.time, y: sd.score, name: 'Raw Score', type: 'scatter', yaxis: 'y2', line: {{color: '#cbd5e1', dash: 'dot', width: 2}}, hoverinfo: 'none' }};
             
             // Markers
             const entryCX = []; const entryCY = [];
@@ -441,48 +453,48 @@ def main():
                 if(sd.fake_rec[i]) {{ fakeRX.push(sd.time[i]); fakeRY.push(sd.price[i]); }}
             }}
             
-            const traceEntryC = {{ x: entryCX, y: entryCY, mode: 'markers', name: 'Entry C', marker: {{symbol: 'triangle-up', size: 14, color: 'green'}}, hoverinfo: 'none' }};
-            const traceFakeR = {{ x: fakeRX, y: fakeRY, mode: 'markers', name: 'Fake Rec', marker: {{symbol: 'x', size: 12, color: 'red'}}, hoverinfo: 'none' }};
+            const traceEntryC = {{ x: entryCX, y: entryCY, mode: 'markers', name: 'Entry C', marker: {{symbol: 'triangle-up', size: 14, color: '#22c55e'}}, hoverinfo: 'none' }};
+            const traceFakeR = {{ x: fakeRX, y: fakeRY, mode: 'markers', name: 'Fake Rec', marker: {{symbol: 'x', size: 12, color: '#ef4444'}}, hoverinfo: 'none' }};
 
             const data = [tracePrice, traceFMLC, traceFP, traceER, traceScore, traceEntryC, traceFakeR];
             
             const layout = {{
                 title: {{
                     text: symbol + ' Forensic Chart',
-                    font: {{ color: '#0f172a', size: 18, weight: 'bold' }}
+                    font: {{ color: '#f8fafc', size: 18, weight: 'bold' }}
                 }},
                 height: 800,
-                paper_bgcolor: '#ffffff',
-                plot_bgcolor: '#f8fafc',
+                paper_bgcolor: '#18181b',
+                plot_bgcolor: '#18181b',
                 xaxis: {{
-                    title: {{ text: 'Timestamp UTC', font: {{ color: '#475569' }} }},
-                    tickfont: {{ color: '#475569' }},
-                    gridcolor: '#e2e8f0',
+                    title: {{ text: 'Timestamp UTC', font: {{ color: '#94a3b8' }} }},
+                    tickfont: {{ color: '#94a3b8' }},
+                    gridcolor: '#27272a',
                     showspikes: true,
                     spikemode: 'across',
                     spikedash: 'solid',
-                    spikecolor: '#94a3b8',
+                    spikecolor: '#52525b',
                     spikethickness: 1
                 }},
                 yaxis: {{
-                    title: {{ text: 'Price Proxy', font: {{ color: '#475569' }} }},
-                    tickfont: {{ color: '#475569' }},
-                    gridcolor: '#e2e8f0',
+                    title: {{ text: 'Price Proxy', font: {{ color: '#94a3b8' }} }},
+                    tickfont: {{ color: '#94a3b8' }},
+                    gridcolor: '#27272a',
                     domain: [0.6, 1]
                 }},
                 yaxis2: {{
-                    title: {{ text: 'Score/Metric', font: {{ color: '#475569' }} }},
-                    tickfont: {{ color: '#475569' }},
-                    gridcolor: '#e2e8f0',
+                    title: {{ text: 'Score/Metric', font: {{ color: '#94a3b8' }} }},
+                    tickfont: {{ color: '#94a3b8' }},
+                    gridcolor: '#27272a',
                     domain: [0.3, 0.55],
                     range: [0, 10],
                     fixedrange: true,
                     anchor: 'x'
                 }},
                 yaxis3: {{
-                    title: {{ text: 'Evidence Ratio (ER)', font: {{ color: '#475569' }} }},
-                    tickfont: {{ color: '#475569' }},
-                    gridcolor: '#e2e8f0',
+                    title: {{ text: 'Evidence Ratio (ER)', font: {{ color: '#94a3b8' }} }},
+                    tickfont: {{ color: '#94a3b8' }},
+                    gridcolor: '#27272a',
                     domain: [0, 0.25],
                     range: [0, 10],
                     fixedrange: true,
@@ -491,7 +503,7 @@ def main():
                 hovermode: 'x',
                 showlegend: true,
                 legend: {{
-                    font: {{ color: '#1e293b' }}
+                    font: {{ color: '#cbd5e1' }}
                 }}
             }};
             
@@ -518,18 +530,21 @@ def main():
             }});
             
             // Update top cards with latest values
+            let latestPrice = "N/A";
             let latestER = "N/A";
             let latestFMLC = "N/A";
             let latestFP = "N/A";
             let latestScore = "N/A";
             
             for (let i = sd.time.length - 1; i >= 0; i--) {{
+                if (latestPrice === "N/A" && sd.price[i] !== null) latestPrice = sd.price[i].toFixed(4);
                 if (latestER === "N/A" && sd.er[i] !== null) latestER = sd.er[i].toFixed(2);
                 if (latestFMLC === "N/A" && sd.fmlc[i] !== null) latestFMLC = sd.fmlc[i].toFixed(2);
                 if (latestFP === "N/A" && sd.fp[i] !== null) latestFP = sd.fp[i].toFixed(2);
                 if (latestScore === "N/A" && sd.score[i] !== null) latestScore = sd.score[i].toFixed(2);
             }}
             
+            document.getElementById('cardPrice').innerText = latestPrice;
             document.getElementById('cardER').innerText = latestER;
             document.getElementById('cardFMLC').innerText = latestFMLC;
             document.getElementById('cardFlowprint').innerText = latestFP;
