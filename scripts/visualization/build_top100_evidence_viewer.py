@@ -374,13 +374,17 @@ def main():
             border-radius: 8px; 
             box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -2px rgba(15, 23, 42, 0.1); 
             padding: 20px; 
-            border: 1px solid #3f3f46;
+            border: 2px solid #000000;
         }}
         #hoverReadout {{
             display: flex;
             gap: 12px;
             margin-bottom: 20px;
             flex-wrap: wrap;
+            border: 2px solid #000000;
+            border-radius: 8px;
+            padding: 15px;
+            background: #ffffff;
         }}
         .readout-box {{
             flex: 1;
@@ -559,7 +563,39 @@ def main():
                 showlegend: true,
                 legend: {{
                     font: {{ color: '#cbd5e1' }}
-                }}
+                }},
+                shapes: [
+                    {{
+                        type: 'rect',
+                        xref: 'paper',
+                        yref: 'paper',
+                        x0: 0,
+                        y0: 0.6,
+                        x1: 1,
+                        y1: 1.0,
+                        line: {{color: '#000000', width: 2}}
+                    }},
+                    {{
+                        type: 'rect',
+                        xref: 'paper',
+                        yref: 'paper',
+                        x0: 0,
+                        y0: 0.3,
+                        x1: 1,
+                        y1: 0.55,
+                        line: {{color: '#000000', width: 2}}
+                    }},
+                    {{
+                        type: 'rect',
+                        xref: 'paper',
+                        yref: 'paper',
+                        x0: 0,
+                        y0: 0,
+                        x1: 1,
+                        y1: 0.25,
+                        line: {{color: '#000000', width: 2}}
+                    }}
+                ]
             }};
             
             Plotly.newPlot('chart', data, layout);
