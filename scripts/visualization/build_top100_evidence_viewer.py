@@ -312,25 +312,29 @@ def main():
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             background: #eef4f8; 
             margin: 0; 
-            padding: 20px; 
+            padding: 10px; 
             color: #1e293b;
         }}
         .header {{ 
             background: #ffffff; 
-            padding: 20px; 
+            padding: 10px 15px; 
             border-radius: 8px; 
-            margin-bottom: 20px; 
+            margin-bottom: 10px; 
             box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05); 
             border: 1px solid #dbeafe;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }}
         h2 {{
-            margin-top: 0;
+            margin: 0;
             color: #0f172a;
+            font-size: 18px;
         }}
         .controls {{ display: flex; gap: 20px; align-items: center; }}
         select {{ 
-            padding: 6px 12px; 
-            font-size: 15px; 
+            padding: 4px 8px; 
+            font-size: 13px; 
             border: 1px solid #cbd5e1; 
             border-radius: 6px; 
             background-color: #ffffff;
@@ -344,32 +348,32 @@ def main():
         .metric-cards {{
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             flex-wrap: wrap;
         }}
         .metric-card {{
             flex: 1;
-            min-width: 140px;
+            min-width: 120px;
             background: #ffffff;
             border: 1px solid #dbeafe;
             border-radius: 6px;
-            padding: 8px 12px;
+            padding: 6px 10px;
             box-shadow: 0 2px 4px -1px rgba(15, 23, 42, 0.05); 
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 2px;
             box-sizing: border-box;
             justify-content: center;
         }}
         .mc-label {{
-            font-size: 10px;
+            font-size: 9px;
             text-transform: uppercase;
             font-weight: 700;
             color: #64748b;
             letter-spacing: 0.05em;
         }}
         .mc-value {{
-            font-size: 18px;
+            font-size: 15px;
             font-weight: 800;
             color: #0f172a;
             font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
@@ -379,31 +383,31 @@ def main():
             background: #18181b; 
             border-radius: 8px; 
             box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -2px rgba(15, 23, 42, 0.1); 
-            padding: 20px; 
+            padding: 10px; 
             border: 2px solid #000000;
         }}
         #hoverReadout {{
             display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
+            gap: 10px;
+            margin-bottom: 10px;
             flex-wrap: wrap;
             border: 2px solid #000000;
             border-radius: 8px;
-            padding: 15px;
+            padding: 8px 12px;
             background: #ffffff;
         }}
         .window-controls {{
             display: flex;
             gap: 8px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }}
         .win-btn {{
             background-color: #ffffff;
             color: #1e293b;
             border: 2px solid #000000;
-            padding: 6px 14px;
+            padding: 4px 10px;
             border-radius: 6px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
             cursor: pointer;
             outline: none;
@@ -419,26 +423,26 @@ def main():
         }}
         .readout-box {{
             flex: 1;
-            min-width: 140px;
+            min-width: 120px;
             background: rgba(30, 41, 59, 0.9);
             border: 1px solid #475569;
             border-radius: 6px;
-            padding: 10px 14px;
+            padding: 6px 10px;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 2px;
             color: #f8fafc;
             box-sizing: border-box;
         }}
         .ro-label {{
-            font-size: 11px;
+            font-size: 9px;
             text-transform: uppercase;
             font-weight: 700;
             color: #94a3b8;
             letter-spacing: 0.05em;
         }}
         .ro-value {{
-            font-size: 22px;
+            font-size: 16px;
             font-weight: 700;
             font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
             line-height: 1.2;
@@ -450,11 +454,11 @@ def main():
         <h2>Top 100 Local Research Evidence Viewer</h2>
         <div class="controls">
             <div>
-                <label style="font-weight: 500; margin-right: 8px;">Symbol Selector:</label>
+                <label style="font-weight: 500; margin-right: 8px; font-size: 13px;">Symbol Selector:</label>
                 <select id="symbolSelect"></select>
             </div>
             <div>
-                <span id="regimeIndicator" style="font-weight: bold; padding: 5px 10px; border-radius: 3px;"></span>
+                <span id="regimeIndicator" style="font-weight: bold; padding: 5px 10px; border-radius: 3px; font-size: 12px;"></span>
             </div>
         </div>
     </div>
@@ -485,7 +489,7 @@ def main():
     <div id="hoverReadout">
         <div class="readout-box" style="flex: 1.5; min-width: 180px;">
             <span class="ro-label">Time (UTC)</span>
-            <span class="ro-value" id="roTime" style="color: #cbd5e1; font-size: 16px;">Hover chart...</span>
+            <span class="ro-value" id="roTime" style="color: #cbd5e1; font-size: 14px;">Hover chart...</span>
         </div>
         <div class="readout-box">
             <span class="ro-label">Price</span>
@@ -550,10 +554,10 @@ def main():
                 hoverinfo: 'none'
             }};
             const tracePrice = {{ x: sd.time, y: sd.price, name: 'Close', type: 'scatter', yaxis: 'y', line: {{color: '#ffffff', width: 2}}, hoverinfo: 'none' }};
-            const traceFMLC = {{ x: sd.time, y: sd.fmlc, name: 'FMLC', type: 'scatter', yaxis: 'y2', line: {{color: '#c084fc', width: 2.5}}, hoverinfo: 'none' }};
-            const traceFP = {{ x: sd.time, y: sd.fp, name: 'Flowprint', type: 'scatter', yaxis: 'y2', line: {{color: '#fb923c', width: 2.5}}, hoverinfo: 'none' }};
+            const traceFMLC = {{ x: sd.time, y: sd.fmlc, name: 'FMLC', type: 'scatter', yaxis: 'y2', line: {{color: '#ef4444', width: 2.5}}, hoverinfo: 'none' }};
+            const traceFP = {{ x: sd.time, y: sd.fp, name: 'Flowprint', type: 'scatter', yaxis: 'y2', line: {{color: '#22c55e', width: 1.5}}, hoverinfo: 'none' }};
             const traceER = {{ x: sd.time, y: sd.er, name: 'ER', type: 'bar', yaxis: 'y3', marker: {{color: '#ef4444'}}, hoverinfo: 'none' }};
-            const traceScore = {{ x: sd.time, y: sd.score, name: 'Raw Score', type: 'scatter', yaxis: 'y2', line: {{color: '#cbd5e1', dash: 'dot', width: 2}}, hoverinfo: 'none' }};
+            const traceScore = {{ x: sd.time, y: sd.score, name: 'Raw Score', type: 'scatter', mode: 'markers', yaxis: 'y2', marker: {{color: '#a855f7', size: 6}}, hoverinfo: 'none' }};
             
             // Markers
             const entryCX = []; const entryCY = [];
@@ -572,9 +576,9 @@ def main():
             const layout = {{
                 title: {{
                     text: symbol + ' Forensic Chart',
-                    font: {{ color: '#f8fafc', size: 18, weight: 'bold' }}
+                    font: {{ color: '#f8fafc', size: 16, weight: 'bold' }}
                 }},
-                height: 1200,
+                height: 820,
                 paper_bgcolor: '#18181b',
                 plot_bgcolor: '#18181b',
                 xaxis: {{
@@ -592,13 +596,13 @@ def main():
                     title: {{ text: 'Price Proxy', font: {{ color: '#94a3b8' }} }},
                     tickfont: {{ color: '#94a3b8' }},
                     gridcolor: '#27272a',
-                    domain: [0.55, 1.0]
+                    domain: [0.58, 1.00]
                 }},
                 yaxis2: {{
                     title: {{ text: 'Score/Metric', font: {{ color: '#94a3b8' }} }},
                     tickfont: {{ color: '#94a3b8' }},
                     gridcolor: '#27272a',
-                    domain: [0.25, 0.50],
+                    domain: [0.28, 0.54],
                     range: [0, 10],
                     fixedrange: true,
                     anchor: 'x'
@@ -607,7 +611,7 @@ def main():
                     title: {{ text: 'Evidence Ratio (ER)', font: {{ color: '#94a3b8' }} }},
                     tickfont: {{ color: '#94a3b8' }},
                     gridcolor: '#27272a',
-                    domain: [0, 0.20],
+                    domain: [0.00, 0.22],
                     range: [0, 10],
                     fixedrange: true,
                     anchor: 'x'
@@ -623,9 +627,9 @@ def main():
                         xref: 'paper',
                         yref: 'paper',
                         x0: 0,
-                        y0: 0.55,
+                        y0: 0.58,
                         x1: 1,
-                        y1: 1.0,
+                        y1: 1.00,
                         line: {{color: '#000000', width: 2}}
                     }},
                     {{
@@ -633,9 +637,9 @@ def main():
                         xref: 'paper',
                         yref: 'paper',
                         x0: 0,
-                        y0: 0.25,
+                        y0: 0.28,
                         x1: 1,
-                        y1: 0.50,
+                        y1: 0.54,
                         line: {{color: '#000000', width: 2}}
                     }},
                     {{
@@ -643,9 +647,9 @@ def main():
                         xref: 'paper',
                         yref: 'paper',
                         x0: 0,
-                        y0: 0,
+                        y0: 0.00,
                         x1: 1,
-                        y1: 0.20,
+                        y1: 0.22,
                         line: {{color: '#000000', width: 2}}
                     }}
                 ]
