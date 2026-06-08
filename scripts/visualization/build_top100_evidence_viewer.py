@@ -275,9 +275,16 @@ def main():
             entry_c.append(is_entry_c)
             fake_rec.append(is_fake_rec)
             
+        opens = df_merged['open'].tolist()
+        highs = df_merged['high'].tolist()
+        lows = df_merged['low'].tolist()
+        
         export_symbols[symbol] = {
             'time': times,
             'price': prices,
+            'open': opens,
+            'high': highs,
+            'low': lows,
             'fmlc': fmlcs,
             'fp': fps,
             'er': ers,
@@ -496,7 +503,21 @@ def main():
             const sd = symbolsData[symbol];
             if(!sd) return;
             
-            const tracePrice = {{ x: sd.time, y: sd.price, name: 'Price', type: 'scatter', yaxis: 'y', line: {{color: '#60a5fa', width: 2.5}}, hoverinfo: 'none' }};
+            const traceCandle = {{
+                x: sd.time,
+                open: sd.open,
+                high: sd.high,
+                low: sd.low,
+                close: sd.price,
+                type: 'candlestick',
+                yaxis: 'y',
+                name: 'OHLC',
+                increasing: {{ line: {{ color: '#059669', width: 1 }}, fillcolor: '#059669' }},
+                decreasing: {{ line: {{ color: '#dc2626', width: 1 }}, fillcolor: '#dc2626' }},
+                opacity: 0.45,
+                hoverinfo: 'none'
+            }};
+            const tracePrice = {{ x: sd.time, y: sd.price, name: 'Close', type: 'scatter', yaxis: 'y', line: {{color: '#ffffff', width: 2}}, hoverinfo: 'none' }};
             const traceFMLC = {{ x: sd.time, y: sd.fmlc, name: 'FMLC', type: 'scatter', yaxis: 'y2', line: {{color: '#c084fc', width: 2.5}}, hoverinfo: 'none' }};
             const traceFP = {{ x: sd.time, y: sd.fp, name: 'Flowprint', type: 'scatter', yaxis: 'y2', line: {{color: '#fb923c', width: 2.5}}, hoverinfo: 'none' }};
             const traceER = {{ x: sd.time, y: sd.er, name: 'ER', type: 'bar', yaxis: 'y3', marker: {{color: '#ef4444'}}, hoverinfo: 'none' }};
@@ -514,7 +535,7 @@ def main():
             const traceEntryC = {{ x: entryCX, y: entryCY, mode: 'markers', name: 'Entry C', marker: {{symbol: 'triangle-up', size: 14, color: '#22c55e'}}, hoverinfo: 'none' }};
             const traceFakeR = {{ x: fakeRX, y: fakeRY, mode: 'markers', name: 'Fake Rec', marker: {{symbol: 'x', size: 12, color: '#ef4444'}}, hoverinfo: 'none' }};
 
-            const data = [tracePrice, traceFMLC, traceFP, traceER, traceScore, traceEntryC, traceFakeR];
+            const data = [traceCandle, tracePrice, traceFMLC, traceFP, traceER, traceScore, traceEntryC, traceFakeR];
             
             const layout = {{
                 title: {{
@@ -532,7 +553,8 @@ def main():
                     spikemode: 'across',
                     spikedash: 'solid',
                     spikecolor: '#52525b',
-                    spikethickness: 1
+                    spikethickness: 1,
+                    rangeslider: {{ visible: false }}
                 }},
                 yaxis: {{
                     title: {{ text: 'Price Proxy', font: {{ color: '#94a3b8' }} }},
