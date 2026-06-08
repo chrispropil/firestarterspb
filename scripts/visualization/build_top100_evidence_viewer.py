@@ -376,6 +376,38 @@ def main():
             padding: 20px; 
             border: 1px solid #3f3f46;
         }}
+        #hoverReadout {{
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }}
+        .readout-box {{
+            flex: 1;
+            min-width: 140px;
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid #475569;
+            border-radius: 6px;
+            padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            color: #f8fafc;
+            box-sizing: border-box;
+        }}
+        .ro-label {{
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: 0.05em;
+        }}
+        .ro-value {{
+            font-size: 22px;
+            font-weight: 700;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            line-height: 1.2;
+        }}
     </style>
 </head>
 <body>
@@ -415,8 +447,31 @@ def main():
         </div>
     </div>
 
-    <div id="hoverReadout" style="margin-bottom: 20px; padding: 12px; background: #f0f7ff; border: 1px solid #bfdbfe; border-radius: 6px; font-family: monospace; font-size: 14px; color: #1e3a8a;">
-        Hover over the chart to view exact metrics.
+    <div id="hoverReadout">
+        <div class="readout-box" style="flex: 1.5; min-width: 180px;">
+            <span class="ro-label">Time (UTC)</span>
+            <span class="ro-value" id="roTime" style="color: #cbd5e1; font-size: 16px;">Hover chart...</span>
+        </div>
+        <div class="readout-box">
+            <span class="ro-label">Price</span>
+            <span class="ro-value" id="roPrice" style="color: #60a5fa;">-</span>
+        </div>
+        <div class="readout-box">
+            <span class="ro-label">ER</span>
+            <span class="ro-value" id="roER" style="color: #ef4444;">-</span>
+        </div>
+        <div class="readout-box">
+            <span class="ro-label">FMLC</span>
+            <span class="ro-value" id="roFMLC" style="color: #c084fc;">-</span>
+        </div>
+        <div class="readout-box">
+            <span class="ro-label">Flowprint</span>
+            <span class="ro-value" id="roFlowprint" style="color: #fb923c;">-</span>
+        </div>
+        <div class="readout-box">
+            <span class="ro-label">Score</span>
+            <span class="ro-value" id="roScore" style="color: #cbd5e1;">-</span>
+        </div>
     </div>
 
     <div id="chart"></div>
@@ -519,13 +574,12 @@ def main():
                     const er = sd.er[ptIndex];
                     const score = sd.score[ptIndex];
                     
-                    const readout = document.getElementById('hoverReadout');
-                    readout.innerHTML = `<strong>Time:</strong> ${{time}} &nbsp;|&nbsp; 
-                                         <strong>Price:</strong> ${{price.toFixed(4)}} &nbsp;|&nbsp; 
-                                         <strong>FMLC:</strong> ${{fmlc !== null ? fmlc.toFixed(2) : 'N/A'}} &nbsp;|&nbsp; 
-                                         <strong>FP:</strong> ${{fp !== null ? fp.toFixed(2) : 'N/A'}} &nbsp;|&nbsp; 
-                                         <strong>ER:</strong> ${{er !== null ? er.toFixed(2) : 'N/A'}} &nbsp;|&nbsp; 
-                                         <strong>Score:</strong> ${{score !== null ? score.toFixed(2) : 'N/A'}}`;
+                    document.getElementById('roTime').innerText = time;
+                    document.getElementById('roPrice').innerText = price.toFixed(4);
+                    document.getElementById('roER').innerText = er !== null ? er.toFixed(2) : 'N/A';
+                    document.getElementById('roFMLC').innerText = fmlc !== null ? fmlc.toFixed(2) : 'N/A';
+                    document.getElementById('roFlowprint').innerText = fp !== null ? fp.toFixed(2) : 'N/A';
+                    document.getElementById('roScore').innerText = score !== null ? score.toFixed(2) : 'N/A';
                 }}
             }});
             
