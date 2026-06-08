@@ -574,7 +574,7 @@ def main():
                     text: symbol + ' Forensic Chart',
                     font: {{ color: '#f8fafc', size: 18, weight: 'bold' }}
                 }},
-                height: 800,
+                height: 1200,
                 paper_bgcolor: '#18181b',
                 plot_bgcolor: '#18181b',
                 xaxis: {{
@@ -592,13 +592,13 @@ def main():
                     title: {{ text: 'Price Proxy', font: {{ color: '#94a3b8' }} }},
                     tickfont: {{ color: '#94a3b8' }},
                     gridcolor: '#27272a',
-                    domain: [0.6, 1]
+                    domain: [0.55, 1.0]
                 }},
                 yaxis2: {{
                     title: {{ text: 'Score/Metric', font: {{ color: '#94a3b8' }} }},
                     tickfont: {{ color: '#94a3b8' }},
                     gridcolor: '#27272a',
-                    domain: [0.3, 0.55],
+                    domain: [0.25, 0.50],
                     range: [0, 10],
                     fixedrange: true,
                     anchor: 'x'
@@ -607,7 +607,7 @@ def main():
                     title: {{ text: 'Evidence Ratio (ER)', font: {{ color: '#94a3b8' }} }},
                     tickfont: {{ color: '#94a3b8' }},
                     gridcolor: '#27272a',
-                    domain: [0, 0.25],
+                    domain: [0, 0.20],
                     range: [0, 10],
                     fixedrange: true,
                     anchor: 'x'
@@ -623,7 +623,7 @@ def main():
                         xref: 'paper',
                         yref: 'paper',
                         x0: 0,
-                        y0: 0.6,
+                        y0: 0.55,
                         x1: 1,
                         y1: 1.0,
                         line: {{color: '#000000', width: 2}}
@@ -633,9 +633,9 @@ def main():
                         xref: 'paper',
                         yref: 'paper',
                         x0: 0,
-                        y0: 0.3,
+                        y0: 0.25,
                         x1: 1,
-                        y1: 0.55,
+                        y1: 0.50,
                         line: {{color: '#000000', width: 2}}
                     }},
                     {{
@@ -645,7 +645,7 @@ def main():
                         x0: 0,
                         y0: 0,
                         x1: 1,
-                        y1: 0.25,
+                        y1: 0.20,
                         line: {{color: '#000000', width: 2}}
                     }}
                 ]
