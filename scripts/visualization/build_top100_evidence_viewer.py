@@ -336,38 +336,37 @@ def main():
         }}
         .metric-cards {{
             display: flex;
-            gap: 15px;
+            gap: 10px;
             margin-bottom: 20px;
             flex-wrap: wrap;
         }}
         .metric-card {{
             flex: 1;
-            min-width: 180px;
+            min-width: 140px;
             background: #ffffff;
             border: 1px solid #dbeafe;
-            border-radius: 8px;
-            padding: 20px 24px;
-            box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05); 
+            border-radius: 6px;
+            padding: 8px 12px;
+            box-shadow: 0 2px 4px -1px rgba(15, 23, 42, 0.05); 
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            min-height: 100px;
+            gap: 4px;
             box-sizing: border-box;
             justify-content: center;
         }}
         .mc-label {{
-            font-size: 12px;
+            font-size: 10px;
             text-transform: uppercase;
             font-weight: 700;
             color: #64748b;
             letter-spacing: 0.05em;
         }}
         .mc-value {{
-            font-size: 32px;
+            font-size: 18px;
             font-weight: 800;
             color: #0f172a;
             font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-            line-height: 1;
+            line-height: 1.1;
         }}
         #chart {{ 
             background: #18181b; 
