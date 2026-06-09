@@ -14,7 +14,10 @@ DATA_DIRS = [
     "C:/firestarterspb/data/research/binance_top100_excluding_existing_5_1month",
     "C:/firestarterspb/data/research/binance_core88_missing_1month",
 ]
-DERIV_DIR = "C:/firestarterspb/data/research/binance_top100_derivatives_context_1month"
+DERIV_DIRS = [
+    "C:/firestarterspb/data/research/binance_top100_derivatives_context_1month",
+    "C:/firestarterspb/data/research/binance_core88_missing_derivatives_context_1month",
+]
 OUT_HTML = "C:/firestarterspb/reports/html/core88_evidence_viewer/index.html"
 AUDIT_REPORT_PATH = "C:/firestarterspb/reports/firestarter_core88_evidence_viewer_build_audit.md"
 CORE88_SYMBOLS_PATH = "C:/firestarterspb/configs/firestarter_core88_binance_usdt_symbols.txt"
@@ -29,17 +32,21 @@ def load_core88_symbols():
 def load_derivatives_data(symbol):
     data = {}
     subdirs = ["fundingRate", "openInterestHist", "takerlongshortRatio", "globalLongShortAccountRatio", "topLongShortAccountRatio", "topLongShortPositionRatio", "premiumIndex"]
+
     for sd in subdirs:
-        file_path = os.path.join(DERIV_DIR, sd, f"{symbol}_{sd}.csv")
-        if os.path.exists(file_path):
-            try:
-                df_temp = pd.read_csv(file_path)
-                if not df_temp.empty:
-                    time_col = "fundingTime" if sd == "fundingRate" else ("time" if sd == "premiumIndex" else "timestamp")
-                    df_temp['datetime'] = pd.to_datetime(df_temp[time_col], unit='ms', utc=True)
-                    data[sd] = df_temp
-            except Exception as e:
-                pass
+        for deriv_dir in DERIV_DIRS:
+            file_path = os.path.join(deriv_dir, sd, f"{symbol}_{sd}.csv")
+            if os.path.exists(file_path):
+                try:
+                    df_temp = pd.read_csv(file_path)
+                    if not df_temp.empty:
+                        time_col = "fundingTime" if sd == "fundingRate" else ("time" if sd == "premiumIndex" else "timestamp")
+                        df_temp["datetime"] = pd.to_datetime(df_temp[time_col], unit="ms", utc=True)
+                        data[sd] = df_temp
+                        break
+                except Exception:
+                    pass
+
     return data
 
 def merge_derivatives(df_1h, deriv_data):
@@ -799,6 +806,8 @@ This document audits the deployment of the Top 100 Evidence Viewer.
 
 if __name__ == '__main__':
     main()
+
+
 
 
 
