@@ -1,0 +1,59 @@
+version: 1
+status: NOTICE_ONLY
+manual_review_required: true
+trade_execution: false
+
+# Scenarios remain disabled until Chris finalizes exact criteria.
+# All alerts are research notices only.
+
+scenarios:
+  - id: BUY_ACCUMULATION_RECLAIM_001
+    side: BUY_RESEARCH
+    enabled: false
+    description: "Potential buy-side reclaim pattern. Requires manual review."
+    symbols: CORE88
+    criteria:
+      er:
+        min: null
+        max: null
+      fmlc:
+        min: null
+        rising_lookback_hours: null
+      flowprint:
+        min: null
+        rising_lookback_hours: null
+      raw_score:
+        min: null
+      price_condition:
+        type: placeholder
+      regime:
+        allowed: []
+    alert:
+      severity: watch
+      cooldown_minutes: 60
+      message: "Manual chart review required. No automated trade."
+
+  - id: SHORT_HOLLOW_RALLY_001
+    side: SHORT_RESEARCH
+    enabled: false
+    description: "Potential short-side hollow rally / flow failure. Requires manual review."
+    symbols: CORE88
+    criteria:
+      price_condition:
+        type: placeholder
+      er:
+        min: null
+      fmlc:
+        max: null
+        falling_lookback_hours: null
+      flowprint:
+        max: null
+        falling_lookback_hours: null
+      raw_score:
+        max: null
+      regime:
+        allowed: []
+    alert:
+      severity: watch
+      cooldown_minutes: 60
+      message: "Manual chart review required. No automated trade."
