@@ -259,7 +259,6 @@ def main():
         scores = df_merged['raw_score'].tolist()
         
         entry_c = []
-        fake_rec = []
         
         for i in range(len(times)):
             ts = times[i]
@@ -282,13 +281,10 @@ def main():
                     
                 reg = basket_regime.get(ts, 'neutral')
                 is_entry_c = (reg == 'bearish') and fmlc_rise and fp_rise
-                is_fake_rec = fmlc_rise and not fp_rise
             else:
                 is_entry_c = False
-                is_fake_rec = False
                 
             entry_c.append(is_entry_c)
-            fake_rec.append(is_fake_rec)
             
         opens = df_merged['open'].tolist()
         highs = df_merged['high'].tolist()
@@ -304,8 +300,7 @@ def main():
             'fp': fps,
             'er': ers,
             'score': scores,
-            'entry_c': entry_c,
-            'fake_rec': fake_rec
+            'entry_c': entry_c
         }
 
     export_data = {
@@ -576,17 +571,14 @@ def main():
             
             // Markers
             const entryCX = []; const entryCY = [];
-            const fakeRX = []; const fakeRY = [];
             
             for(let i=0; i<sd.time.length; i++) {{
                 if(sd.entry_c[i]) {{ entryCX.push(sd.time[i]); entryCY.push(sd.price[i]); }}
-                if(sd.fake_rec[i]) {{ fakeRX.push(sd.time[i]); fakeRY.push(sd.price[i]); }}
             }}
             
-            const traceEntryC = {{ x: entryCX, y: entryCY, mode: 'markers', name: 'Entry C', marker: {{symbol: 'triangle-up', size: 14, color: '#22c55e'}}, hoverinfo: 'none' }};
-            const traceFakeR = {{ x: fakeRX, y: fakeRY, mode: 'markers', name: 'Fake Rec', marker: {{symbol: 'x', size: 12, color: '#ef4444'}}, hoverinfo: 'none' }};
+            const traceEntryC = {{ x: entryCX, y: entryCY, mode: 'markers', name: 'Firestarter Candidate', marker: {{symbol: 'triangle-up', size: 14, color: '#22c55e'}}, hoverinfo: 'none' }};
 
-            const data = [traceCandle, tracePrice, traceFMLC, traceFP, traceER, traceScore, traceEntryC, traceFakeR];
+            const data = [traceCandle, tracePrice, traceFMLC, traceFP, traceER, traceScore, traceEntryC];
             
             const layout = {{
                 title: {{
@@ -716,7 +708,7 @@ def main():
             updateRegime();
         }}
         
-        let currentWindowDays = 3;
+        let currentWindowDays = 0;
 
         function applyWindow(days, sd) {{
             const buttons = {{
@@ -807,6 +799,8 @@ This document audits the deployment of the Top 100 Evidence Viewer.
 
 if __name__ == '__main__':
     main()
+
+
 
 
 
