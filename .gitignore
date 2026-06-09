@@ -3,3 +3,18 @@
 data/research/binance_top100_excluding_existing_5_1month/
 .ipynb_checkpoints/
 notebooks/.ipynb_checkpoints/
+
+# Firestarter Live Audits generated / local-only outputs
+reports/firestarter_live_audits/ai_match_index.csv
+reports/firestarter_live_audits/review_packets/
+reports/firestarter_live_audits/screenshots/
+reports/firestarter_live_audits/screenshot_inbox/
+reports/firestarter_live_audits/reviewed/
+
+# Keep docs, templates, summaries, and tiny samples commit-safe
+!reports/firestarter_live_audits/README.md
+!reports/firestarter_live_audits/README_AI_MATCH_INDEX.md
+!reports/firestarter_live_audits/templates/
+!reports/firestarter_live_audits/templates/*.md
+!reports/firestarter_live_audits/samples/
+!reports/firestarter_live_audits/samples/*.csv
