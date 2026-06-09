@@ -52,6 +52,7 @@ python scripts\firestarter_live_audits\search_ai_match_patterns.py --pattern-nam
 - Tags and quality: `--primary-event-type`, `--secondary-tag-contains`,
   `--data-quality-exclude`
 - Output controls: `--top-n`, `--sync-drive`
+- Optional event clustering: `--cluster-hours`
 
 `--price-compression-hours` uses a compact fixed definition: over the requested
 hour window, the close range must be no more than 1.0% of the latest close in
@@ -69,6 +70,25 @@ current/prior N-hour close window for each symbol, then calculates
 `(current_close - recent_low) / (recent_high - recent_low)`. Rows with an
 unavailable or zero-width range are excluded from this filter. A value of `0.70`
 means the current close is in the upper 30% of its recent close range.
+
+`--cluster-hours` groups repeated matching rows for the same symbol into one
+event when consecutive matching rows are within the supplied number of hours.
+When clustering is enabled, the run also writes `<pattern_name>_events.csv` with
+one row per clustered event:
+
+- `symbol`
+- `event_start`
+- `event_end`
+- `match_count`
+- `best_timestamp`
+- `best_raw_score`
+- `max_fmlc`
+- `min_er`
+- `min_flowprint`
+- `first_close`
+- `last_close`
+
+Default behavior is unchanged when `--cluster-hours` is not supplied.
 
 ## Boundary
 

@@ -49,6 +49,19 @@ BASE_COLUMNS = [
 ]
 DERIVED_COLUMNS = ["movement_score"]
 OUTPUT_COLUMNS = BASE_COLUMNS + DERIVED_COLUMNS
+EVENT_COLUMNS = [
+    "symbol",
+    "event_start",
+    "event_end",
+    "match_count",
+    "best_timestamp",
+    "best_raw_score",
+    "max_fmlc",
+    "min_er",
+    "min_flowprint",
+    "first_close",
+    "last_close",
+]
 
 
 @dataclass(frozen=True)
@@ -56,6 +69,7 @@ class SearchOutputs:
     matches_path: Path
     summary_path: Path
     top_examples_path: Path
+    events_path: Path | None = None
 
 
 def parse_args() -> argparse.Namespace:
@@ -96,6 +110,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-quality-exclude")
     parser.add_argument("--top-n", type=int, default=50)
     parser.add_argument("--sync-drive", action="store_true")
+    parser.add_argument("--cluster-hours", type=int)
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--drive-dir", type=Path, default=DEFAULT_DRIVE_DIR)
@@ -499,6 +514,7 @@ def output_paths(output_dir: Path, pattern_name: str) -> SearchOutputs:
         matches_path=output_dir / f"{pattern_name}_matches.csv",
         summary_path=output_dir / f"{pattern_name}_summary.md",
         top_examples_path=output_dir / f"{pattern_name}_top_examples.csv",
+        events_path=output_dir / f"{pattern_name}_events.csv",
     )
 
 
@@ -510,6 +526,103 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
             writer.writerow({col: row.get(col, "") for col in OUTPUT_COLUMNS})
 
 
+def write_events_csv(path: Path, events: list[dict[str, object]]) -> None:
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=EVENT_COLUMNS)
+        writer.writeheader()
+        for event in events:
+            writer.writerow({col: event.get(col, "") for col in EVENT_COLUMNS})
+
+
+def parse_timestamp(value: object) -> datetime:
+    return datetime.strptime(str(value), "%Y-%m-%dT%H:%M:%SZ").replace(
+        tzinfo=timezone.utc
+    )
+
+
+def compact_float(value: object, digits: int = 6) -> str:
+    if value is None or value == "":
+        return ""
+    return f"{float(value):.{digits}f}".rstrip("0").rstrip(".")
+
+
+def best_event_row(rows: list[dict[str, object]]) -> dict[str, object]:
+    return max(
+        rows,
+        key=lambda row: (
+            float(row.get("_movement_score", 0.0)),
+            float(row.get("_raw_score") or -999999.0),
+            str(row["timestamp"]),
+        ),
+    )
+
+
+def build_event(rows: list[dict[str, object]]) -> dict[str, object]:
+    ordered = sorted(rows, key=lambda row: str(row["timestamp"]))
+    best = best_event_row(ordered)
+    fmlc_values = [float(row["_fmlc"]) for row in ordered if row.get("_fmlc") is not None]
+    er_values = [float(row["_er"]) for row in ordered if row.get("_er") is not None]
+    flowprint_values = [
+        float(row["_flowprint"])
+        for row in ordered
+        if row.get("_flowprint") is not None
+    ]
+
+    return {
+        "symbol": ordered[0]["symbol"],
+        "event_start": ordered[0]["timestamp"],
+        "event_end": ordered[-1]["timestamp"],
+        "match_count": len(ordered),
+        "best_timestamp": best["timestamp"],
+        "best_raw_score": compact_float(best.get("_raw_score")),
+        "max_fmlc": compact_float(max(fmlc_values) if fmlc_values else None),
+        "min_er": compact_float(min(er_values) if er_values else None),
+        "min_flowprint": compact_float(
+            min(flowprint_values) if flowprint_values else None
+        ),
+        "first_close": compact_float(ordered[0].get("_close")),
+        "last_close": compact_float(ordered[-1].get("_close")),
+    }
+
+
+def cluster_matches(
+    matches: list[dict[str, object]], cluster_hours: int | None
+) -> list[dict[str, object]]:
+    if cluster_hours is None:
+        return []
+    if cluster_hours < 0:
+        raise ValueError("--cluster-hours must be >= 0")
+
+    events: list[dict[str, object]] = []
+    by_symbol: dict[str, list[dict[str, object]]] = defaultdict(list)
+    for row in matches:
+        by_symbol[str(row["symbol"])].append(row)
+
+    max_gap_seconds = cluster_hours * 3600
+    for symbol_rows in by_symbol.values():
+        ordered = sorted(symbol_rows, key=lambda row: str(row["timestamp"]))
+        current_event: list[dict[str, object]] = []
+        previous_time: datetime | None = None
+        for row in ordered:
+            row_time = parse_timestamp(row["timestamp"])
+            if (
+                current_event
+                and previous_time is not None
+                and (row_time - previous_time).total_seconds() > max_gap_seconds
+            ):
+                events.append(build_event(current_event))
+                current_event = []
+            current_event.append(row)
+            previous_time = row_time
+        if current_event:
+            events.append(build_event(current_event))
+
+    return sorted(
+        events,
+        key=lambda event: (str(event["event_start"]), str(event["symbol"])),
+    )
+
+
 def write_summary(
     path: Path,
     args: argparse.Namespace,
@@ -517,6 +630,7 @@ def write_summary(
     rows_searched: int,
     matches: list[dict[str, object]],
     outputs: SearchOutputs,
+    events: list[dict[str, object]] | None = None,
 ) -> None:
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     symbol_counts = Counter(str(row["symbol"]) for row in matches)
@@ -524,6 +638,8 @@ def write_summary(
     first_ts = min((str(row["timestamp"]) for row in matches), default="N/A")
     last_ts = max((str(row["timestamp"]) for row in matches), default="N/A")
     filters_text = "\n".join(f"- {item}" for item in filters) if filters else "- None"
+    event_count = len(events) if events is not None else "N/A"
+    events_path = outputs.events_path if events is not None else "N/A"
 
     content = f"""# Firestarter Live Audits - Pattern Search Summary
 
@@ -537,12 +653,14 @@ def write_summary(
 | input_index_path | `{args.input}` |
 | row_count_searched | `{rows_searched}` |
 | match_count | `{len(matches)}` |
+| clustered_event_count | `{event_count}` |
 | symbol_count_matched | `{len(symbol_counts)}` |
 | top_matched_symbols | `{top_symbols or 'N/A'}` |
 | first_matched_timestamp | `{first_ts}` |
 | last_matched_timestamp | `{last_ts}` |
 | matches_path | `{outputs.matches_path}` |
 | top_examples_path | `{outputs.top_examples_path}` |
+| events_path | `{events_path}` |
 
 ## Filters Applied
 
@@ -557,7 +675,10 @@ def write_summary(
 
 def sync_to_drive(outputs: SearchOutputs, drive_dir: Path) -> None:
     drive_dir.mkdir(parents=True, exist_ok=True)
-    for path in (outputs.matches_path, outputs.summary_path, outputs.top_examples_path):
+    paths = [outputs.matches_path, outputs.summary_path, outputs.top_examples_path]
+    if outputs.events_path is not None and outputs.events_path.exists():
+        paths.append(outputs.events_path)
+    for path in paths:
         shutil.copy2(path, drive_dir / path.name)
 
 
@@ -589,8 +710,11 @@ def main() -> int:
     )[: args.top_n]
 
     outputs = output_paths(args.output_dir, args.pattern_name)
+    events = cluster_matches(matches, args.cluster_hours)
     write_csv(outputs.matches_path, matches_by_time)
     write_csv(outputs.top_examples_path, top_examples)
+    if args.cluster_hours is not None and outputs.events_path is not None:
+        write_events_csv(outputs.events_path, events)
     write_summary(
         outputs.summary_path,
         args,
@@ -598,6 +722,7 @@ def main() -> int:
         len(rows),
         matches,
         outputs,
+        events if args.cluster_hours is not None else None,
     )
 
     if args.sync_drive:
@@ -610,6 +735,9 @@ def main() -> int:
     print(f"matches_path={outputs.matches_path}")
     print(f"summary_path={outputs.summary_path}")
     print(f"top_examples_path={outputs.top_examples_path}")
+    if args.cluster_hours is not None:
+        print(f"clustered_event_count={len(events)}")
+        print(f"events_path={outputs.events_path}")
     if args.sync_drive:
         print(f"drive_dir={args.drive_dir}")
     return 0
