@@ -16,8 +16,8 @@ This document audits the deployment of the Top 100 Evidence Viewer.
 ---
 
 ## 2. Dataset Metrics
-- **Total Files Scanned:** 37
-- **Successful Symbol Maps:** 37
-- **Output HTML Size:** ~2.85 MB
+- **Total Files Scanned:** 82
+- **Successful Symbol Maps:** 82
+- **Output HTML Size:** ~5.74 MB
 
 **PASS: PASS_CORE88_EVIDENCE_VIEWER_BUILD_COMPLETE**

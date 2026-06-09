@@ -10,7 +10,10 @@ from datetime import datetime
 # Configure stdout encoding to prevent Unicode errors on Windows
 sys.stdout.reconfigure(encoding='utf-8')
 
-DATA_DIR = "C:/firestarterspb/data/research/binance_top100_excluding_existing_5_1month"
+DATA_DIRS = [
+    "C:/firestarterspb/data/research/binance_top100_excluding_existing_5_1month",
+    "C:/firestarterspb/data/research/binance_core88_missing_1month",
+]
 DERIV_DIR = "C:/firestarterspb/data/research/binance_top100_derivatives_context_1month"
 OUT_HTML = "C:/firestarterspb/reports/html/core88_evidence_viewer/index.html"
 AUDIT_REPORT_PATH = "C:/firestarterspb/reports/firestarter_core88_evidence_viewer_build_audit.md"
@@ -186,7 +189,9 @@ def compute_cell1_metrics(df_merged):
 
 def main():
     core88_symbols = load_core88_symbols()
-    csv_files = glob.glob(os.path.join(DATA_DIR, "*_1month_5m.csv"))
+    csv_files = []
+    for data_dir in DATA_DIRS:
+        csv_files.extend(glob.glob(os.path.join(data_dir, "*_1month_5m.csv")))
     csv_files = [fp for fp in csv_files if os.path.basename(fp).replace("_1month_5m.csv", "") in core88_symbols]
     
     # Process all symbols
@@ -802,5 +807,6 @@ This document audits the deployment of the Top 100 Evidence Viewer.
 
 if __name__ == '__main__':
     main()
+
 
 
