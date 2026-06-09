@@ -1,0 +1,41 @@
+version: 1
+status: NOTICE_ONLY
+manual_review_required: true
+trade_execution: false
+
+runtime:
+  mode: dry_run
+  cadence_minutes: 15
+  timezone: UTC
+  write_audit: false
+  send_alerts: false
+
+outputs:
+  alert_events_jsonl: reports/firestarterlive/firestarterlive_alert_events.jsonl
+  latest_status_json: reports/firestarterlive/firestarterlive_latest_status.json
+  daily_audit_md: reports/firestarterlive/firestarterlive_daily_audit.md
+
+notifications:
+  console:
+    enabled: true
+  file:
+    enabled: false
+  slack:
+    enabled: false
+    webhook_env_var: FIRESTARTERLIVE_SLACK_WEBHOOK_URL
+  email:
+    enabled: false
+  telegram:
+    enabled: false
+  discord:
+    enabled: false
+  windows_toast:
+    enabled: false
+
+safety:
+  notice_only: true
+  no_auto_trade: true
+  no_exchange_keys: true
+  no_order_execution: true
+  manual_review_required: true
+  fail_closed_on_invalid_config: true
