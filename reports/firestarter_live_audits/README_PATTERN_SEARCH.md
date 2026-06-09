@@ -43,6 +43,12 @@ python scripts\firestarter_live_audits\search_ai_match_patterns.py --pattern-nam
   `--raw-score-rising-hours`, `--raw-score-falling-hours`,
   `--flowprint-rising-hours`, `--flowprint-falling-hours`, `--price-up-hours`,
   `--price-down-hours`, `--price-compression-hours`
+- Price extension and recent-high research filters: `--prior-return-hours`,
+  `--min-prior-return-pct`, `--near-recent-high-hours`,
+  `--max-distance-from-recent-high-pct`, `--forward-return-hours`,
+  `--max-forward-return-pct`
+- Range-position research filters: `--upper-range-hours`,
+  `--min-close-position-in-range`
 - Tags and quality: `--primary-event-type`, `--secondary-tag-contains`,
   `--data-quality-exclude`
 - Output controls: `--top-n`, `--sync-drive`
@@ -50,6 +56,19 @@ python scripts\firestarter_live_audits\search_ai_match_patterns.py --pattern-nam
 `--price-compression-hours` uses a compact fixed definition: over the requested
 hour window, the close range must be no more than 1.0% of the latest close in
 that window.
+
+The prior-return filter compares the current close to the close N hours earlier
+for the same symbol. The recent-high filter computes the highest close over the
+current/prior N-hour symbol window and requires current close to be within the
+requested percentage distance from that high. The forward-return filter compares
+the close N hours after the current row to the current close. These are
+research filters only and do not mutate the source index.
+
+The range-position filter computes the recent low and high over the
+current/prior N-hour close window for each symbol, then calculates
+`(current_close - recent_low) / (recent_high - recent_low)`. Rows with an
+unavailable or zero-width range are excluded from this filter. A value of `0.70`
+means the current close is in the upper 30% of its recent close range.
 
 ## Boundary
 

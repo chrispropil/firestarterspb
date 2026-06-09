@@ -83,6 +83,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--price-up-hours", type=int)
     parser.add_argument("--price-down-hours", type=int)
     parser.add_argument("--price-compression-hours", type=int)
+    parser.add_argument("--prior-return-hours", type=int)
+    parser.add_argument("--min-prior-return-pct", type=float)
+    parser.add_argument("--near-recent-high-hours", type=int)
+    parser.add_argument("--max-distance-from-recent-high-pct", type=float)
+    parser.add_argument("--forward-return-hours", type=int)
+    parser.add_argument("--max-forward-return-pct", type=float)
+    parser.add_argument("--upper-range-hours", type=int)
+    parser.add_argument("--min-close-position-in-range", type=float)
     parser.add_argument("--primary-event-type")
     parser.add_argument("--secondary-tag-contains")
     parser.add_argument("--data-quality-exclude")
@@ -158,6 +166,14 @@ def value_at(row: dict[str, object], metric: str, hours_back: int) -> float | No
     return symbol_rows[idx].get(f"_{metric}")  # type: ignore[index]
 
 
+def future_value_at(row: dict[str, object], metric: str, hours_forward: int) -> float | None:
+    symbol_rows = row["_symbol_rows"]
+    idx = int(row["_symbol_index"]) + hours_forward
+    if idx >= len(symbol_rows):  # type: ignore[arg-type]
+        return None
+    return symbol_rows[idx].get(f"_{metric}")  # type: ignore[index]
+
+
 def has_risen(row: dict[str, object], metric: str, hours: int) -> bool:
     current = row.get(f"_{metric}")
     prior = value_at(row, metric, hours)
@@ -168,6 +184,74 @@ def has_fallen(row: dict[str, object], metric: str, hours: int) -> bool:
     current = row.get(f"_{metric}")
     prior = value_at(row, metric, hours)
     return current is not None and prior is not None and float(current) < float(prior)
+
+
+def prior_return_pct(row: dict[str, object], hours: int) -> float | None:
+    current = row.get("_close")
+    prior = value_at(row, "close", hours)
+    if current is None or prior is None or float(prior) == 0:
+        return None
+    return ((float(current) - float(prior)) / float(prior)) * 100
+
+
+def forward_return_pct(row: dict[str, object], hours: int) -> float | None:
+    current = row.get("_close")
+    future = future_value_at(row, "close", hours)
+    if current is None or future is None or float(current) == 0:
+        return None
+    return ((float(future) - float(current)) / float(current)) * 100
+
+
+def distance_from_recent_high_pct(row: dict[str, object], hours: int) -> float | None:
+    current = row.get("_close")
+    if current is None:
+        return None
+
+    symbol_rows = row["_symbol_rows"]
+    idx = int(row["_symbol_index"])
+    start = idx - hours + 1
+    if start < 0:
+        return None
+
+    closes = [
+        item.get("_close")
+        for item in symbol_rows[start : idx + 1]  # type: ignore[index]
+        if item.get("_close") is not None
+    ]
+    if len(closes) < hours:
+        return None
+
+    recent_high = max(float(value) for value in closes)
+    if recent_high <= 0:
+        return None
+    return ((recent_high - float(current)) / recent_high) * 100
+
+
+def close_position_in_range(row: dict[str, object], hours: int) -> float | None:
+    current = row.get("_close")
+    if current is None:
+        return None
+
+    symbol_rows = row["_symbol_rows"]
+    idx = int(row["_symbol_index"])
+    start = idx - hours + 1
+    if start < 0:
+        return None
+
+    closes = [
+        item.get("_close")
+        for item in symbol_rows[start : idx + 1]  # type: ignore[index]
+        if item.get("_close") is not None
+    ]
+    if len(closes) < hours:
+        return None
+
+    recent_low = min(float(value) for value in closes)
+    recent_high = max(float(value) for value in closes)
+    rolling_range = recent_high - recent_low
+    if rolling_range == 0:
+        return None
+    return (float(current) - recent_low) / rolling_range
 
 
 def compressed_price(row: dict[str, object], hours: int) -> bool:
@@ -191,6 +275,26 @@ def compressed_price(row: dict[str, object], hours: int) -> bool:
     return ((high - low) / last) * 100 <= 1.0
 
 
+def meets_min_prior_return(row: dict[str, object], hours: int, threshold: float) -> bool:
+    value = prior_return_pct(row, hours)
+    return value is not None and value >= threshold
+
+
+def meets_max_forward_return(row: dict[str, object], hours: int, threshold: float) -> bool:
+    value = forward_return_pct(row, hours)
+    return value is not None and value <= threshold
+
+
+def near_recent_high(row: dict[str, object], hours: int, threshold: float) -> bool:
+    value = distance_from_recent_high_pct(row, hours)
+    return value is not None and value <= threshold
+
+
+def meets_min_close_position(row: dict[str, object], hours: int, threshold: float) -> bool:
+    value = close_position_in_range(row, hours)
+    return value is not None and value >= threshold
+
+
 def movement_delta(row: dict[str, object], metric: str, hours: int | None) -> float:
     if not hours:
         return 0.0
@@ -211,6 +315,18 @@ def attach_movement_score(row: dict[str, object], args: argparse.Namespace) -> N
     score += movement_delta(row, "flowprint", args.flowprint_falling_hours)
     score += movement_delta(row, "close", args.price_up_hours)
     score += movement_delta(row, "close", args.price_down_hours)
+    if args.prior_return_hours:
+        score += abs(prior_return_pct(row, args.prior_return_hours) or 0.0)
+    if args.forward_return_hours:
+        score += abs(forward_return_pct(row, args.forward_return_hours) or 0.0)
+    if args.near_recent_high_hours:
+        distance = distance_from_recent_high_pct(row, args.near_recent_high_hours)
+        if distance is not None:
+            score += max(0.0, 10.0 - distance)
+    if args.upper_range_hours:
+        position = close_position_in_range(row, args.upper_range_hours)
+        if position is not None:
+            score += position * 10.0
 
     if score == 0:
         for metric in ("raw_score", "fmlc", "flowprint", "er"):
@@ -291,6 +407,78 @@ def build_checks(args: argparse.Namespace) -> list[tuple[str, Callable[[dict[str
         checks.append((f"price down over {args.price_down_hours}h", lambda row: has_fallen(row, "close", args.price_down_hours)))
     if args.price_compression_hours is not None:
         checks.append((f"price compression <= 1.0% over {args.price_compression_hours}h", lambda row: compressed_price(row, args.price_compression_hours)))
+    if args.prior_return_hours is not None:
+        if args.min_prior_return_pct is None:
+            raise ValueError("--prior-return-hours requires --min-prior-return-pct")
+        checks.append(
+            (
+                f"prior return over {args.prior_return_hours}h >= {args.min_prior_return_pct:g}%",
+                lambda row: meets_min_prior_return(
+                    row, args.prior_return_hours, args.min_prior_return_pct
+                ),
+            )
+        )
+    elif args.min_prior_return_pct is not None:
+        raise ValueError("--min-prior-return-pct requires --prior-return-hours")
+
+    if args.near_recent_high_hours is not None:
+        if args.max_distance_from_recent_high_pct is None:
+            raise ValueError(
+                "--near-recent-high-hours requires --max-distance-from-recent-high-pct"
+            )
+        checks.append(
+            (
+                "distance from recent high over "
+                f"{args.near_recent_high_hours}h <= "
+                f"{args.max_distance_from_recent_high_pct:g}%",
+                lambda row: near_recent_high(
+                    row,
+                    args.near_recent_high_hours,
+                    args.max_distance_from_recent_high_pct,
+                ),
+            )
+        )
+    elif args.max_distance_from_recent_high_pct is not None:
+        raise ValueError(
+            "--max-distance-from-recent-high-pct requires --near-recent-high-hours"
+        )
+
+    if args.forward_return_hours is not None:
+        if args.max_forward_return_pct is None:
+            raise ValueError("--forward-return-hours requires --max-forward-return-pct")
+        checks.append(
+            (
+                f"forward return over {args.forward_return_hours}h <= "
+                f"{args.max_forward_return_pct:g}%",
+                lambda row: meets_max_forward_return(
+                    row, args.forward_return_hours, args.max_forward_return_pct
+                ),
+            )
+        )
+    elif args.max_forward_return_pct is not None:
+        raise ValueError("--max-forward-return-pct requires --forward-return-hours")
+
+    if args.upper_range_hours is not None:
+        if args.min_close_position_in_range is None:
+            raise ValueError(
+                "--upper-range-hours requires --min-close-position-in-range"
+            )
+        checks.append(
+            (
+                "close position in range over "
+                f"{args.upper_range_hours}h >= "
+                f"{args.min_close_position_in_range:g}",
+                lambda row: meets_min_close_position(
+                    row,
+                    args.upper_range_hours,
+                    args.min_close_position_in_range,
+                ),
+            )
+        )
+    elif args.min_close_position_in_range is not None:
+        raise ValueError(
+            "--min-close-position-in-range requires --upper-range-hours"
+        )
 
     if args.primary_event_type:
         event = args.primary_event_type
