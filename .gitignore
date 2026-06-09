@@ -10,6 +10,7 @@ reports/firestarter_live_audits/review_packets/
 reports/firestarter_live_audits/screenshots/
 reports/firestarter_live_audits/screenshot_inbox/
 reports/firestarter_live_audits/reviewed/
+reports/firestarter_live_audits/pattern_searches/
 
 # Keep docs, templates, summaries, and tiny samples commit-safe
 !reports/firestarter_live_audits/README.md
