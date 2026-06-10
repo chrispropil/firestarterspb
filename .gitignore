@@ -46,3 +46,7 @@ scripts/visualization/__pycache__/
 scripts/run_*.py
 scripts/firestarter_a4_evidence_viewer.py
 scripts/visualization/build_top100_x2_research_viewer.py
+
+# FirestarterLive validation generated outputs
+reports/firestarter_live_audits/validation/
+scripts/**/__pycache__/
