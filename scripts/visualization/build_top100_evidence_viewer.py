@@ -55,7 +55,7 @@ def merge_derivatives(df_1h, deriv_data):
     if "openInterestHist" in deriv_data:
         df_oi = deriv_data["openInterestHist"][["datetime", "sumOpenInterest", "sumOpenInterestValue"]].dropna().sort_values("datetime")
         df_oi["datetime"] = pd.to_datetime(df_oi["datetime"], utc=True).astype('datetime64[ns, UTC]')
-        df_merged = pd.merge_asof(df_merged, df_oi.set_index("datetime"), left_index=True, right_index=True, direction="backward", tolerance=pd.Timedelta("15Min"))
+        df_merged = pd.merge_asof(df_merged, df_oi.set_index("datetime"), left_index=True, right_index=True, direction="backward", tolerance=pd.Timedelta("50Min"))
     else:
         df_merged["sumOpenInterest"] = np.nan
         df_merged["sumOpenInterestValue"] = np.nan
@@ -63,14 +63,14 @@ def merge_derivatives(df_1h, deriv_data):
     if "takerlongshortRatio" in deriv_data:
         df_t = deriv_data["takerlongshortRatio"][["datetime", "buySellRatio"]].dropna().sort_values("datetime")
         df_t["datetime"] = pd.to_datetime(df_t["datetime"], utc=True).astype('datetime64[ns, UTC]')
-        df_merged = pd.merge_asof(df_merged, df_t.set_index("datetime"), left_index=True, right_index=True, direction="backward", tolerance=pd.Timedelta("15Min"))
+        df_merged = pd.merge_asof(df_merged, df_t.set_index("datetime"), left_index=True, right_index=True, direction="backward", tolerance=pd.Timedelta("50Min"))
     else:
         df_merged["buySellRatio"] = np.nan
         
     if "globalLongShortAccountRatio" in deriv_data:
         df_gls = deriv_data["globalLongShortAccountRatio"][["datetime", "longShortRatio"]].dropna().sort_values("datetime")
         df_gls["datetime"] = pd.to_datetime(df_gls["datetime"], utc=True).astype('datetime64[ns, UTC]')
-        df_merged = pd.merge_asof(df_merged, df_gls.set_index("datetime"), left_index=True, right_index=True, direction="backward", tolerance=pd.Timedelta("15Min"))
+        df_merged = pd.merge_asof(df_merged, df_gls.set_index("datetime"), left_index=True, right_index=True, direction="backward", tolerance=pd.Timedelta("50Min"))
     else:
         df_merged["longShortRatio"] = np.nan
         
