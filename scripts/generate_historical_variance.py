@@ -204,7 +204,7 @@ def process_symbol(symbol):
     df_1h["above_4h_trend"] = df_1h["close"] > df_1h["ema_50_4h"]
     
     # 5. Filter to last 720 records
-    df_final = df_1h.tail(720).copy()
+    df_final = df_1h.tail(720).copy().reset_index(drop=True)
     
     # 6. Calculate Scores
     ers = []
