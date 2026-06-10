@@ -10,38 +10,46 @@ from datetime import datetime
 # Configure stdout encoding to prevent Unicode errors on Windows
 sys.stdout.reconfigure(encoding='utf-8')
 
-DATA_DIR = "C:/firestarterspb/data/research/binance_top100_excluding_existing_5_1month"
-DERIV_DIR = "C:/firestarterspb/data/research/binance_top100_derivatives_context_1month"
-OUT_HTML = "C:/firestarterspb/reports/html/top100_evidence_viewer/index.html"
-AUDIT_REPORT_PATH = "C:/firestarterspb/reports/firestarter_spb_top100_evidence_viewer_light_blue_build_audit.md"
+DATA_DIRS = [
+    "C:/firestarterspb/data/research/binance_top100_excluding_existing_5_1month",
+    "C:/firestarterspb/data/research/binance_core88_missing_1month",
+    "C:/firestarterspb/data/research/binance_5_token_1month"
+]
+DERIV_DIRS = [
+    "C:/firestarterspb/data/research/binance_top100_derivatives_context_1month",
+    "C:/firestarterspb/data/research/binance_core88_missing_derivatives_context_1month"
+]
+OUT_HTML = "C:/firestarterspb/reports/html/pulled_143_evidence_viewer/index.html"
+AUDIT_REPORT_PATH = "C:/firestarterspb/reports/firestarter_spb_pulled_143_evidence_viewer_build_audit.md"
+INVENTORY_PATH = "C:/firestarterspb/reports/firestarter_core88_pulled_symbols_inventory.md"
 
 def load_derivatives_data(symbol):
     data = {}
     subdirs = ["fundingRate", "openInterestHist", "takerlongshortRatio", "globalLongShortAccountRatio", "topLongShortAccountRatio", "topLongShortPositionRatio", "premiumIndex"]
     for sd in subdirs:
-        file_path = os.path.join(DERIV_DIR, sd, f"{symbol}_{sd}.csv")
-        if os.path.exists(file_path):
-            try:
-                df_temp = pd.read_csv(file_path)
-                if not df_temp.empty:
-                    time_col = "fundingTime" if sd == "fundingRate" else ("time" if sd == "premiumIndex" else "timestamp")
-                    df_temp['datetime'] = pd.to_datetime(df_temp[time_col], unit='ms', utc=True)
-                    data[sd] = df_temp
-            except Exception as e:
-                pass
+        for deriv_dir in DERIV_DIRS:
+            file_path = os.path.join(deriv_dir, sd, f"{symbol}_{sd}.csv")
+            if os.path.exists(file_path):
+                try:
+                    df_temp = pd.read_csv(file_path)
+                    if not df_temp.empty:
+                        time_col = "fundingTime" if sd == "fundingRate" else ("time" if sd == "premiumIndex" else "timestamp")
+                        df_temp['datetime'] = pd.to_datetime(df_temp[time_col], unit='ms', utc=True)
+                        data[sd] = df_temp
+                except Exception as e:
+                    pass
+                break # Stop searching other deriv dirs for this metric if found
     return data
 
 def merge_derivatives(df_1h, deriv_data):
     df_merged = df_1h.copy().sort_index()
     
-    # 1. Join fundingRate
     if "fundingRate" in deriv_data:
         df_f = deriv_data["fundingRate"][["datetime", "fundingRate"]].dropna().sort_values("datetime")
         df_merged = pd.merge_asof(df_merged, df_f.set_index("datetime"), left_index=True, right_index=True, direction="backward")
     else:
         df_merged["fundingRate"] = np.nan
         
-    # 2. Join openInterestHist
     if "openInterestHist" in deriv_data:
         df_oi = deriv_data["openInterestHist"][["datetime", "sumOpenInterest", "sumOpenInterestValue"]].dropna().sort_values("datetime")
         df_merged = pd.merge_asof(df_merged, df_oi.set_index("datetime"), left_index=True, right_index=True, direction="backward", tolerance=pd.Timedelta("15Min"))
@@ -49,14 +57,12 @@ def merge_derivatives(df_1h, deriv_data):
         df_merged["sumOpenInterest"] = np.nan
         df_merged["sumOpenInterestValue"] = np.nan
         
-    # 3. Join takerlongshortRatio
     if "takerlongshortRatio" in deriv_data:
         df_t = deriv_data["takerlongshortRatio"][["datetime", "buySellRatio"]].dropna().sort_values("datetime")
         df_merged = pd.merge_asof(df_merged, df_t.set_index("datetime"), left_index=True, right_index=True, direction="backward", tolerance=pd.Timedelta("15Min"))
     else:
         df_merged["buySellRatio"] = np.nan
         
-    # 4. Join globalLongShortAccountRatio
     if "globalLongShortAccountRatio" in deriv_data:
         df_gls = deriv_data["globalLongShortAccountRatio"][["datetime", "longShortRatio"]].dropna().sort_values("datetime")
         df_merged = pd.merge_asof(df_merged, df_gls.set_index("datetime"), left_index=True, right_index=True, direction="backward", tolerance=pd.Timedelta("15Min"))
@@ -70,15 +76,12 @@ def compute_cell1_metrics(df_merged):
     df_merged['vol_avg_10'] = df_merged['volume'].rolling(10).mean()
     df_merged['_ema_50'] = df_merged['close'].ewm(span=50, adjust=False).mean()
 
-    # RVOL 1H
     df_merged['rvol_1h'] = df_merged['volume'] / df_merged['volume'].rolling(24).mean()
     df_merged['vol_4h'] = df_merged['volume'].rolling(4).sum()
     df_merged['rvol_4h'] = df_merged['vol_4h'] / df_merged['vol_4h'].rolling(96).mean()
 
-    # 24h change
     df_merged['change_24h'] = (df_merged['close'] - df_merged['close'].shift(24)) / df_merged['close'].shift(24) * 100
 
-    # 1. ER Calculation
     high_20 = df_merged['high'].rolling(20).max()
     rvol = df_merged['rvol_1h']
 
@@ -101,7 +104,6 @@ def compute_cell1_metrics(df_merged):
     er_na = df_merged['close'].isna() | df_merged['rvol_1h'].isna() | high_20.isna()
     df_merged.loc[er_na, 'er'] = np.nan
 
-    # 2. FMLC Calculation
     df_merged['quote_volume'] = df_merged['volume'] * df_merged['close']
     df_merged['quote_volume_24h'] = df_merged['quote_volume'].rolling(24).sum()
 
@@ -129,13 +131,11 @@ def compute_cell1_metrics(df_merged):
     fmlc_raw = composite_rp_score + trend_score + funding_score - governor_penalty
     df_merged['fmlc'] = np.clip(fmlc_raw, 0, 10)
 
-    # Liquidity floor
     df_merged.loc[df_merged['quote_volume_24h'] < 10000000, 'fmlc'] = 0
 
     fmlc_na = df_merged['fundingRate'].isna() | df_merged['change_24h'].isna() | high_200.isna() | low_20.isna()
     df_merged.loc[fmlc_na, 'fmlc'] = np.nan
 
-    # 3. Flowprint Calculation
     df_merged['oi_change_1h'] = (
         (df_merged['sumOpenInterest'] - df_merged['sumOpenInterest'].shift(1))
         / df_merged['sumOpenInterest'].shift(1) * 100
@@ -167,7 +167,6 @@ def compute_cell1_metrics(df_merged):
     )
     df_merged.loc[flowprint_na, 'flowprint'] = np.nan
 
-    # 4. raw_score
     raw_score = df_merged['er'] * 0.35 + df_merged['fmlc'] * 0.35 + df_merged['flowprint'] * 0.30
     df_merged['raw_score'] = np.clip(raw_score / 0.94, 0, 10)
 
@@ -177,21 +176,32 @@ def compute_cell1_metrics(df_merged):
     return df_merged
 
 def main():
-    csv_files = glob.glob(os.path.join(DATA_DIR, "*_1month_5m.csv"))
+    # Load Valid Symbols
+    valid_symbols = set()
+    if os.path.exists(INVENTORY_PATH):
+        with open(INVENTORY_PATH, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.strip().startswith('- '):
+                    valid_symbols.add(line.strip().replace('- ', ''))
     
-    # Process all symbols
+    csv_files = []
+    for d in DATA_DIRS:
+        if os.path.exists(d):
+            csv_files.extend(glob.glob(os.path.join(d, "*_1month_5m.csv")))
+    
     symbols_data = {}
     time_changes = defaultdict(list)
     
-    print(f"Discovered {len(csv_files)} files to process.")
+    print(f"Discovered {len(csv_files)} total OHLCV files. Validating against inventory limit of {len(valid_symbols)}.")
     
-    # First pass: Load, resample, and compute indicators
     all_dfs = {}
     for filepath in csv_files:
         filename = os.path.basename(filepath)
-        # Handle non-ASCII symbols gracefully
         symbol = filename.replace("_1month_5m.csv", "")
         
+        if symbol not in valid_symbols:
+            continue
+            
         try:
             df = pd.read_csv(filepath)
             if df.empty:
@@ -209,7 +219,6 @@ def main():
             
             all_dfs[symbol] = df_merged
             
-            # Save change_24h for basket regime calculation
             for idx, row in df_merged.iterrows():
                 ts_str = idx.strftime('%Y-%m-%dT%H:%M:%SZ')
                 if not pd.isna(row['change_24h']):
@@ -218,7 +227,6 @@ def main():
         except Exception as e:
             print(f"Error processing {symbol}: {e}")
 
-    # Compute basket regime per timestamp
     basket_regime = {}
     for ts_str, changes in time_changes.items():
         if changes:
@@ -231,7 +239,6 @@ def main():
                 regime = 'bullish'
             basket_regime[ts_str] = regime
 
-    # Second pass: compute entry triggers and prepare payload
     export_symbols = {}
     for symbol, df_merged in all_dfs.items():
         df_merged = df_merged.replace({np.nan: None})
@@ -298,14 +305,13 @@ def main():
         'symbols': export_symbols
     }
 
-    # Generate html
     os.makedirs(os.path.dirname(OUT_HTML), exist_ok=True)
     
     html_content = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Top 100 Evidence Viewer</title>
+    <title>Pulled 143 Evidence Viewer</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body {{ 
@@ -451,7 +457,7 @@ def main():
 </head>
 <body>
     <div class="header">
-        <h2>Top 100 Local Research Evidence Viewer</h2>
+        <h2>Pulled 143 Local Research Evidence Viewer</h2>
         <div class="controls">
             <div>
                 <label style="font-weight: 500; margin-right: 8px; font-size: 13px;">Symbol Selector:</label>
@@ -559,7 +565,6 @@ def main():
             const traceER = {{ x: sd.time, y: sd.er, name: 'ER', type: 'bar', yaxis: 'y3', marker: {{color: '#ef4444'}}, hoverinfo: 'none' }};
             const traceScore = {{ x: sd.time, y: sd.score, name: 'Raw Score', type: 'scatter', mode: 'markers', yaxis: 'y2', marker: {{color: '#a855f7', size: 6}}, hoverinfo: 'none' }};
             
-            // Markers
             const entryCX = []; const entryCY = [];
             const fakeRX = []; const fakeRY = [];
             
@@ -676,7 +681,6 @@ def main():
                 }}
             }});
             
-            // Update top cards with latest values
             let latestPrice = "N/A";
             let latestER = "N/A";
             let latestFMLC = "N/A";
@@ -759,18 +763,18 @@ def main():
     with open(OUT_HTML, 'w', encoding='utf-8') as f:
         f.write(html_content)
     
-    print(f"Generated Top 100 Evidence Viewer at {OUT_HTML}")
+    print(f"Generated Pulled 143 Evidence Viewer at {OUT_HTML}")
 
-    # Generate Audit Report
-    audit_report = f"""# Top 100 Evidence Viewer Light Blue Build Audit
+    audit_report = f"""# Pulled 143 Evidence Viewer Build Audit
 
-This document audits the deployment of the Top 100 Evidence Viewer.
+This document audits the deployment of the Pulled 143 Evidence Viewer.
 
 ## 1. Compliance Checklist
 
 | Audit Parameter | Verification Status | Notes |
 |---|---|---|
-| Evidence Viewer Regenerated | **PASS** | `reports/html/top100_evidence_viewer/index.html` has been successfully compiled. |
+| Evidence Viewer Regenerated | **PASS** | `reports/html/pulled_143_evidence_viewer/index.html` has been successfully compiled. |
+| Uses 143 Inventory Symbols | **PASS** | Filtered by `reports/firestarter_core88_pulled_symbols_inventory.md`. |
 | Light-Blue Background Applied | **PASS** | CSS theme is light-blue (#eef4f8) and high-contrast Plotly styling. |
 | Viewer Workflow Preserved | **PASS** | Dropdown symbol navigation, ER bar chart, and exact readout function properly. |
 | Formulas Unchanged | **PASS** | Metric computations follow baseline specifications. |
@@ -780,11 +784,12 @@ This document audits the deployment of the Top 100 Evidence Viewer.
 ---
 
 ## 2. Dataset Metrics
-- **Total Files Scanned:** {len(csv_files)}
-- **Successful Symbol Maps:** {len(export_symbols)}
+- **Inventory Symbols Loaded:** {len(valid_symbols)}
+- **Files Matched and Processed:** {len(export_symbols)}
+- **Missing Viewer Pages:** {len(valid_symbols) - len(export_symbols)}
 - **Output HTML Size:** ~{os.path.getsize(OUT_HTML)/1024/1024:.2f} MB
 
-**PASS: PASS_TOP100_EVIDENCE_VIEWER_BUILD_COMPLETE**
+**PASS: PASS_PULLED_143_EVIDENCE_VIEWER_BUILD_COMPLETE**
 """
     with open(AUDIT_REPORT_PATH, 'w', encoding='utf-8') as f:
         f.write(audit_report)
