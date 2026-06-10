@@ -43,15 +43,18 @@ def load_derivatives_data(symbol):
 
 def merge_derivatives(df_1h, deriv_data):
     df_merged = df_1h.copy().sort_index()
+    df_merged.index = pd.to_datetime(df_merged.index, utc=True).astype('datetime64[ns, UTC]')
     
     if "fundingRate" in deriv_data:
         df_f = deriv_data["fundingRate"][["datetime", "fundingRate"]].dropna().sort_values("datetime")
+        df_f["datetime"] = pd.to_datetime(df_f["datetime"], utc=True).astype('datetime64[ns, UTC]')
         df_merged = pd.merge_asof(df_merged, df_f.set_index("datetime"), left_index=True, right_index=True, direction="backward")
     else:
         df_merged["fundingRate"] = np.nan
         
     if "openInterestHist" in deriv_data:
         df_oi = deriv_data["openInterestHist"][["datetime", "sumOpenInterest", "sumOpenInterestValue"]].dropna().sort_values("datetime")
+        df_oi["datetime"] = pd.to_datetime(df_oi["datetime"], utc=True).astype('datetime64[ns, UTC]')
         df_merged = pd.merge_asof(df_merged, df_oi.set_index("datetime"), left_index=True, right_index=True, direction="backward", tolerance=pd.Timedelta("15Min"))
     else:
         df_merged["sumOpenInterest"] = np.nan
@@ -59,12 +62,14 @@ def merge_derivatives(df_1h, deriv_data):
         
     if "takerlongshortRatio" in deriv_data:
         df_t = deriv_data["takerlongshortRatio"][["datetime", "buySellRatio"]].dropna().sort_values("datetime")
+        df_t["datetime"] = pd.to_datetime(df_t["datetime"], utc=True).astype('datetime64[ns, UTC]')
         df_merged = pd.merge_asof(df_merged, df_t.set_index("datetime"), left_index=True, right_index=True, direction="backward", tolerance=pd.Timedelta("15Min"))
     else:
         df_merged["buySellRatio"] = np.nan
         
     if "globalLongShortAccountRatio" in deriv_data:
         df_gls = deriv_data["globalLongShortAccountRatio"][["datetime", "longShortRatio"]].dropna().sort_values("datetime")
+        df_gls["datetime"] = pd.to_datetime(df_gls["datetime"], utc=True).astype('datetime64[ns, UTC]')
         df_merged = pd.merge_asof(df_merged, df_gls.set_index("datetime"), left_index=True, right_index=True, direction="backward", tolerance=pd.Timedelta("15Min"))
     else:
         df_merged["longShortRatio"] = np.nan
@@ -175,70 +180,80 @@ def compute_cell1_metrics(df_merged):
 
     return df_merged
 
-def main():
-    # Load Valid Symbols
-    valid_symbols = set()
-    if os.path.exists(INVENTORY_PATH):
-        with open(INVENTORY_PATH, 'r', encoding='utf-8') as f:
-            for line in f:
-                if line.strip().startswith('- '):
-                    valid_symbols.add(line.strip().replace('- ', ''))
+def process_symbol_interval(df_resample, symbol, interval_str, deriv_data):
+    # Standard confirmed resample
+    df_confirmed = df_resample.resample(interval_str).agg({
+        'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last', 'volume': 'sum'
+    }).dropna()
     
-    csv_files = []
-    for d in DATA_DIRS:
-        if os.path.exists(d):
-            csv_files.extend(glob.glob(os.path.join(d, "*_1month_5m.csv")))
-    
-    symbols_data = {}
-    time_changes = defaultdict(list)
-    
-    print(f"Discovered {len(csv_files)} total OHLCV files. Validating against inventory limit of {len(valid_symbols)}.")
-    
-    all_dfs = {}
-    for filepath in csv_files:
-        filename = os.path.basename(filepath)
-        symbol = filename.replace("_1month_5m.csv", "")
+    if not df_confirmed.empty:
+        last_confirmed_time = df_confirmed.index[-1]
+        df_forming = df_resample.loc[df_resample.index > last_confirmed_time]
         
-        if symbol not in valid_symbols:
-            continue
+        # total bars in interval: 12 for 1h, 6 for 30m
+        total_bars = 12 if interval_str.lower() == '1h' else 6
+        
+        if not df_forming.empty and len(df_forming) < total_bars:
+            forming_open = df_forming['open'].iloc[0]
+            forming_close = df_forming['close'].iloc[-1]
+            forming_high = df_forming['high'].max()
+            forming_low = df_forming['low'].min()
+            forming_vol = df_forming['volume'].sum()
             
-        try:
-            df = pd.read_csv(filepath)
-            if df.empty:
-                continue
-                
-            df['open_datetime'] = pd.to_datetime(df['open_time'], unit='ms', utc=True)
-            df_resample = df.set_index('open_datetime')
-            df_1h = df_resample.resample('1h').agg({
-                'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last', 'volume': 'sum'
-            }).dropna()
+            delta = pd.Timedelta(hours=1) if interval_str.lower() == '1h' else pd.Timedelta(minutes=30)
+            forming_time = last_confirmed_time + delta
             
-            deriv_data = load_derivatives_data(symbol)
-            df_merged = merge_derivatives(df_1h, deriv_data)
-            df_merged = compute_cell1_metrics(df_merged)
+            df_forming_row = pd.DataFrame([{
+                'open': forming_open,
+                'high': forming_high,
+                'low': forming_low,
+                'close': forming_close,
+                'volume': forming_vol
+            }], index=[forming_time])
             
-            all_dfs[symbol] = df_merged
-            
-            for idx, row in df_merged.iterrows():
-                ts_str = idx.strftime('%Y-%m-%dT%H:%M:%SZ')
-                if not pd.isna(row['change_24h']):
-                    time_changes[ts_str].append(row['change_24h'])
-                    
-        except Exception as e:
-            print(f"Error processing {symbol}: {e}")
+            df_all = pd.concat([df_confirmed, df_forming_row])
+            has_forming = True
+            forming_count = len(df_forming)
+        else:
+            df_all = df_confirmed.copy()
+            has_forming = False
+            forming_count = 0
+    else:
+        df_all = df_confirmed.copy()
+        has_forming = False
+        forming_count = 0
+        
+    df_merged = merge_derivatives(df_all, deriv_data)
+    df_merged = compute_cell1_metrics(df_merged)
+    
+    df_merged['er_5m_preview_cumulative'] = np.nan
+    if has_forming and not df_merged.empty:
+        last_row = df_merged.iloc[-1]
+        
+        rvol = last_row['rvol_1h']
+        close = last_row['close']
+        high_20 = df_merged['high'].rolling(20).max().iloc[-1]
+        ema_21 = last_row['ema_21']
+        vol_avg_10 = last_row['vol_avg_10']
+        
+        rvol_factor = min(4.0, max(0.0, rvol * 1.6)) if not pd.isna(rvol) else 0.0
+        breakout_factor = min(3.0, max(0.0, (close / high_20 - 0.975) / 0.015 * 3.0)) if not pd.isna(high_20) else 0.0
+        clean_reclaim_factor = 3.0 if (close > ema_21 and last_row['volume'] > 1.2 * vol_avg_10) else 0.0
+        
+        er_continuous = min(10.0, rvol_factor + breakout_factor + clean_reclaim_factor)
+        er_preview = er_continuous * (forming_count / total_bars)
+        
+        df_merged.loc[df_merged.index[-1], 'er_5m_preview_cumulative'] = er_preview
+        
+        # Clear confirmed metrics for the provisional bar
+        df_merged.loc[df_merged.index[-1], 'er'] = np.nan
+        df_merged.loc[df_merged.index[-1], 'fmlc'] = np.nan
+        df_merged.loc[df_merged.index[-1], 'flowprint'] = np.nan
+        df_merged.loc[df_merged.index[-1], 'raw_score'] = np.nan
+        
+    return df_merged
 
-    basket_regime = {}
-    for ts_str, changes in time_changes.items():
-        if changes:
-            avg = sum(changes) / len(changes)
-            if avg < 0:
-                regime = 'bearish'
-            elif 0 <= avg <= 2:
-                regime = 'neutral'
-            else:
-                regime = 'bullish'
-            basket_regime[ts_str] = regime
-
+def get_export_symbols(all_dfs, basket_regime):
     export_symbols = {}
     for symbol, df_merged in all_dfs.items():
         df_merged = df_merged.replace({np.nan: None})
@@ -249,6 +264,7 @@ def main():
         fps = df_merged['flowprint'].tolist()
         ers = df_merged['er'].tolist()
         scores = df_merged['raw_score'].tolist()
+        er_preview = df_merged['er_5m_preview_cumulative'].tolist()
         
         entry_c = []
         fake_rec = []
@@ -296,15 +312,93 @@ def main():
             'fp': fps,
             'er': ers,
             'score': scores,
+            'er_5m_preview_cumulative': er_preview,
             'entry_c': entry_c,
             'fake_rec': fake_rec
         }
+    return export_symbols
 
+def main():
+    # Load Valid Symbols
+    valid_symbols = set()
+    if os.path.exists(INVENTORY_PATH):
+        with open(INVENTORY_PATH, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.strip().startswith('- '):
+                    valid_symbols.add(line.strip().replace('- ', ''))
+    
+    csv_files = []
+    for d in DATA_DIRS:
+        if os.path.exists(d):
+            csv_files.extend(glob.glob(os.path.join(d, "*_1month_5m.csv")))
+            
+    print(f"Discovered {len(csv_files)} total OHLCV files. Validating against inventory limit of {len(valid_symbols)}.")
+    
+    all_dfs_1h = {}
+    all_dfs_30m = {}
+    time_changes_1h = defaultdict(list)
+    time_changes_30m = defaultdict(list)
+    
+    for filepath in csv_files:
+        filename = os.path.basename(filepath)
+        symbol = filename.replace("_1month_5m.csv", "")
+        
+        if symbol not in valid_symbols:
+            continue
+            
+        try:
+            df = pd.read_csv(filepath)
+            if df.empty:
+                continue
+                
+            df['open_datetime'] = pd.to_datetime(df['open_time'], unit='ms', utc=True)
+            df_resample = df.set_index('open_datetime').sort_index()
+            
+            deriv_data = load_derivatives_data(symbol)
+            
+            # Process 1h
+            df_merged_1h = process_symbol_interval(df_resample, symbol, '1h', deriv_data)
+            all_dfs_1h[symbol] = df_merged_1h
+            for idx, row in df_merged_1h.iterrows():
+                ts_str = idx.strftime('%Y-%m-%dT%H:%M:%SZ')
+                if not pd.isna(row['change_24h']):
+                    time_changes_1h[ts_str].append(row['change_24h'])
+                    
+            # Process 30m
+            df_merged_30m = process_symbol_interval(df_resample, symbol, '30Min', deriv_data)
+            all_dfs_30m[symbol] = df_merged_30m
+            for idx, row in df_merged_30m.iterrows():
+                ts_str = idx.strftime('%Y-%m-%dT%H:%M:%SZ')
+                if not pd.isna(row['change_24h']):
+                    time_changes_30m[ts_str].append(row['change_24h'])
+                    
+        except Exception as e:
+            print(f"Error processing {symbol}: {e}")
+            
+    basket_regime_1h = {}
+    for ts_str, changes in time_changes_1h.items():
+        if changes:
+            avg = sum(changes) / len(changes)
+            basket_regime_1h[ts_str] = 'bearish' if avg < 0 else ('neutral' if 0 <= avg <= 2 else 'bullish')
+            
+    basket_regime_30m = {}
+    for ts_str, changes in time_changes_30m.items():
+        if changes:
+            avg = sum(changes) / len(changes)
+            basket_regime_30m[ts_str] = 'bearish' if avg < 0 else ('neutral' if 0 <= avg <= 2 else 'bullish')
+            
+    export_symbols_1h = get_export_symbols(all_dfs_1h, basket_regime_1h)
+    export_symbols_30m = get_export_symbols(all_dfs_30m, basket_regime_30m)
+    
     export_data = {
-        'basket_regime': basket_regime,
-        'symbols': export_symbols
+        'basket_regime': basket_regime_1h,
+        'symbols': export_symbols_1h,
+        'basket_regime_1h': basket_regime_1h,
+        'basket_regime_30m': basket_regime_30m,
+        'symbols_1h': export_symbols_1h,
+        'symbols_30m': export_symbols_30m
     }
-
+    
     os.makedirs(os.path.dirname(OUT_HTML), exist_ok=True)
     
     html_content = f"""<!DOCTYPE html>
@@ -519,21 +613,36 @@ def main():
         </div>
     </div>
 
-    <div class="window-controls">
-        <button class="win-btn" onclick="setWindow(1)" id="btn-1d">1D</button>
-        <button class="win-btn" onclick="setWindow(3)" id="btn-3d">3D</button>
-        <button class="win-btn" onclick="setWindow(6)" id="btn-6d">6D</button>
-        <button class="win-btn" onclick="setWindow(0)" id="btn-full">Full</button>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center;">
+        <div class="window-controls" style="margin-bottom: 0;">
+            <button class="win-btn" onclick="setWindow(1)" id="btn-1d">1D</button>
+            <button class="win-btn" onclick="setWindow(3)" id="btn-3d">3D</button>
+            <button class="win-btn" onclick="setWindow(6)" id="btn-6d">6D</button>
+            <button class="win-btn" onclick="setWindow(0)" id="btn-full">Full</button>
+        </div>
+        <div class="interval-controls" style="display: flex; gap: 8px;">
+            <button class="win-btn active" onclick="setInterval('1h')" id="btn-1h">1H Confirmed</button>
+            <button class="win-btn" onclick="setInterval('30m')" id="btn-30m">30m Confirmed</button>
+        </div>
     </div>
 
     <div id="chart"></div>
     
     <script>
         const exportData = {json.dumps(export_data)};
-        const symbolsData = exportData.symbols;
-        const basketRegime = exportData.basket_regime;
+        let currentInterval = '1h';
+        let currentWindowDays = 3;
+        let currentSymbol = '';
         
-        function updateRegime(timestamp) {{
+        function getSymbolsData() {{
+            return currentInterval === '1h' ? exportData.symbols_1h : exportData.symbols_30m;
+        }}
+        
+        function getBasketRegime() {{
+            return currentInterval === '1h' ? exportData.basket_regime_1h : exportData.basket_regime_30m;
+        }}
+        
+        function updateRegime() {{
             const ind = document.getElementById('regimeIndicator');
             let color = "#cbd5e1";
             ind.innerText = "Viewer Active - Select range in chart";
@@ -542,15 +651,34 @@ def main():
         }}
 
         function drawChart(symbol) {{
+            currentSymbol = symbol;
+            const symbolsData = getSymbolsData();
+            const basketRegime = getBasketRegime();
             const sd = symbolsData[symbol];
             if(!sd) return;
             
+            const N = sd.time.length;
+            const hasProvisional = N > 0 && sd.er_5m_preview_cumulative[N-1] !== null;
+            
+            const confirmedLen = hasProvisional ? N - 1 : N;
+            
+            const confTime = sd.time.slice(0, confirmedLen);
+            const confOpen = sd.open.slice(0, confirmedLen);
+            const confHigh = sd.high.slice(0, confirmedLen);
+            const confLow = sd.low.slice(0, confirmedLen);
+            const confPrice = sd.price.slice(0, confirmedLen);
+            
+            const confFMLC = sd.fmlc.slice(0, confirmedLen);
+            const confFP = sd.fp.slice(0, confirmedLen);
+            const confER = sd.er.slice(0, confirmedLen);
+            const confScore = sd.score.slice(0, confirmedLen);
+            
             const traceCandle = {{
-                x: sd.time,
-                open: sd.open,
-                high: sd.high,
-                low: sd.low,
-                close: sd.price,
+                x: confTime,
+                open: confOpen,
+                high: confHigh,
+                low: confLow,
+                close: confPrice,
                 type: 'candlestick',
                 yaxis: 'y',
                 name: 'OHLC',
@@ -559,16 +687,17 @@ def main():
                 opacity: 0.45,
                 hoverinfo: 'none'
             }};
-            const tracePrice = {{ x: sd.time, y: sd.price, name: 'Close', type: 'scatter', yaxis: 'y', line: {{color: '#ffffff', width: 2}}, hoverinfo: 'none' }};
-            const traceFMLC = {{ x: sd.time, y: sd.fmlc, name: 'FMLC', type: 'scatter', yaxis: 'y2', line: {{color: '#ef4444', width: 2.5}}, hoverinfo: 'none' }};
-            const traceFP = {{ x: sd.time, y: sd.fp, name: 'Flowprint', type: 'scatter', yaxis: 'y2', line: {{color: '#22c55e', width: 1.5}}, hoverinfo: 'none' }};
-            const traceER = {{ x: sd.time, y: sd.er, name: 'ER', type: 'bar', yaxis: 'y3', marker: {{color: '#ef4444'}}, hoverinfo: 'none' }};
-            const traceScore = {{ x: sd.time, y: sd.score, name: 'Raw Score', type: 'scatter', mode: 'markers', yaxis: 'y2', marker: {{color: '#a855f7', size: 6}}, hoverinfo: 'none' }};
+            
+            const tracePrice = {{ x: confTime, y: confPrice, name: 'Close', type: 'scatter', yaxis: 'y', line: {{color: '#ffffff', width: 2}}, hoverinfo: 'none' }};
+            const traceFMLC = {{ x: confTime, y: confFMLC, name: 'FMLC', type: 'scatter', yaxis: 'y2', line: {{color: '#ef4444', width: 2.5}}, hoverinfo: 'none' }};
+            const traceFP = {{ x: confTime, y: confFP, name: 'Flowprint', type: 'scatter', yaxis: 'y2', line: {{color: '#22c55e', width: 1.5}}, hoverinfo: 'none' }};
+            const traceER = {{ x: confTime, y: confER, name: 'ER', type: 'bar', yaxis: 'y3', marker: {{color: '#ef4444'}}, hoverinfo: 'none' }};
+            const traceScore = {{ x: confTime, y: confScore, name: 'Raw Score', type: 'scatter', mode: 'markers', yaxis: 'y2', marker: {{color: '#a855f7', size: 6}}, hoverinfo: 'none' }};
             
             const entryCX = []; const entryCY = [];
             const fakeRX = []; const fakeRY = [];
             
-            for(let i=0; i<sd.time.length; i++) {{
+            for(let i=0; i<confirmedLen; i++) {{
                 if(sd.entry_c[i]) {{ entryCX.push(sd.time[i]); entryCY.push(sd.price[i]); }}
                 if(sd.fake_rec[i]) {{ fakeRX.push(sd.time[i]); fakeRY.push(sd.price[i]); }}
             }}
@@ -577,6 +706,49 @@ def main():
             const traceFakeR = {{ x: fakeRX, y: fakeRY, mode: 'markers', name: 'Fake Rec', marker: {{symbol: 'x', size: 12, color: '#ef4444'}}, hoverinfo: 'none' }};
 
             const data = [traceCandle, tracePrice, traceFMLC, traceFP, traceER, traceScore, traceEntryC, traceFakeR];
+            
+            if (hasProvisional) {{
+                const provIndex = N - 1;
+                const provTime = [sd.time[provIndex]];
+                
+                const traceCandleProv = {{
+                    x: provTime,
+                    open: [sd.open[provIndex]],
+                    high: [sd.high[provIndex]],
+                    low: [sd.low[provIndex]],
+                    close: [sd.price[provIndex]],
+                    type: 'candlestick',
+                    yaxis: 'y',
+                    name: 'OHLC (Prov)',
+                    increasing: {{ line: {{ color: '#eab308', width: 1.5 }}, fillcolor: '#eab308' }},
+                    decreasing: {{ line: {{ color: '#eab308', width: 1.5 }}, fillcolor: '#eab308' }},
+                    opacity: 0.8,
+                    hoverinfo: 'none'
+                }};
+                
+                const tracePriceProv = {{
+                    x: provTime,
+                    y: [sd.price[provIndex]],
+                    name: 'Close (Prov)',
+                    type: 'scatter',
+                    yaxis: 'y',
+                    mode: 'markers',
+                    marker: {{ color: '#eab308', size: 6 }},
+                    hoverinfo: 'none'
+                }};
+                
+                const traceERProv = {{
+                    x: provTime,
+                    y: [sd.er_5m_preview_cumulative[provIndex]],
+                    name: 'ER Preview / Provisional',
+                    type: 'bar',
+                    yaxis: 'y3',
+                    marker: {{ color: '#eab308' }},
+                    hoverinfo: 'none'
+                }};
+                
+                data.push(traceCandleProv, tracePriceProv, traceERProv);
+            }}
             
             const layout = {{
                 title: {{
@@ -627,36 +799,9 @@ def main():
                     font: {{ color: '#cbd5e1' }}
                 }},
                 shapes: [
-                    {{
-                        type: 'rect',
-                        xref: 'paper',
-                        yref: 'paper',
-                        x0: 0,
-                        y0: 0.58,
-                        x1: 1,
-                        y1: 1.00,
-                        line: {{color: '#000000', width: 2}}
-                    }},
-                    {{
-                        type: 'rect',
-                        xref: 'paper',
-                        yref: 'paper',
-                        x0: 0,
-                        y0: 0.28,
-                        x1: 1,
-                        y1: 0.54,
-                        line: {{color: '#000000', width: 2}}
-                    }},
-                    {{
-                        type: 'rect',
-                        xref: 'paper',
-                        yref: 'paper',
-                        x0: 0,
-                        y0: 0.00,
-                        x1: 1,
-                        y1: 0.22,
-                        line: {{color: '#000000', width: 2}}
-                    }}
+                    {{ type: 'rect', xref: 'paper', yref: 'paper', x0: 0, y0: 0.58, x1: 1, y1: 1.00, line: {{color: '#000000', width: 2}} }},
+                    {{ type: 'rect', xref: 'paper', yref: 'paper', x0: 0, y0: 0.28, x1: 1, y1: 0.54, line: {{color: '#000000', width: 2}} }},
+                    {{ type: 'rect', xref: 'paper', yref: 'paper', x0: 0, y0: 0.00, x1: 1, y1: 0.22, line: {{color: '#000000', width: 2}} }}
                 ]
             }};
             
@@ -671,13 +816,22 @@ def main():
                     const fp = sd.fp[ptIndex];
                     const er = sd.er[ptIndex];
                     const score = sd.score[ptIndex];
+                    const erProv = sd.er_5m_preview_cumulative[ptIndex];
                     
                     document.getElementById('roTime').innerText = time;
-                    document.getElementById('roPrice').innerText = price.toFixed(4);
-                    document.getElementById('roER').innerText = er !== null ? er.toFixed(2) : 'N/A';
-                    document.getElementById('roFMLC').innerText = fmlc !== null ? fmlc.toFixed(2) : 'N/A';
-                    document.getElementById('roFlowprint').innerText = fp !== null ? fp.toFixed(2) : 'N/A';
-                    document.getElementById('roScore').innerText = score !== null ? score.toFixed(2) : 'N/A';
+                    document.getElementById('roPrice').innerText = price !== null ? price.toFixed(4) : '-';
+                    
+                    if (erProv !== null) {{
+                        document.getElementById('roER').innerText = erProv.toFixed(1) + " (Prov)";
+                        document.getElementById('roER').style.color = "#eab308";
+                    }} else {{
+                        document.getElementById('roER').innerText = er !== null ? er.toFixed(2) : '-';
+                        document.getElementById('roER').style.color = "#ef4444";
+                    }}
+                    
+                    document.getElementById('roFMLC').innerText = fmlc !== null ? fmlc.toFixed(2) : '-';
+                    document.getElementById('roFlowprint').innerText = fp !== null ? fp.toFixed(2) : '-';
+                    document.getElementById('roScore').innerText = score !== null ? score.toFixed(2) : '-';
                 }}
             }});
             
@@ -686,10 +840,19 @@ def main():
             let latestFMLC = "N/A";
             let latestFP = "N/A";
             let latestScore = "N/A";
+            let latestERColor = "#ef4444";
             
             for (let i = sd.time.length - 1; i >= 0; i--) {{
                 if (latestPrice === "N/A" && sd.price[i] !== null) latestPrice = sd.price[i].toFixed(4);
-                if (latestER === "N/A" && sd.er[i] !== null) latestER = sd.er[i].toFixed(2);
+                
+                if (i === sd.time.length - 1 && sd.er_5m_preview_cumulative[i] !== null) {{
+                    latestER = sd.er_5m_preview_cumulative[i].toFixed(1) + " (Prov)";
+                    latestERColor = "#eab308";
+                }} else if (latestER === "N/A" && sd.er[i] !== null) {{
+                    latestER = sd.er[i].toFixed(2);
+                    latestERColor = "#ef4444";
+                }}
+                
                 if (latestFMLC === "N/A" && sd.fmlc[i] !== null) latestFMLC = sd.fmlc[i].toFixed(2);
                 if (latestFP === "N/A" && sd.fp[i] !== null) latestFP = sd.fp[i].toFixed(2);
                 if (latestScore === "N/A" && sd.score[i] !== null) latestScore = sd.score[i].toFixed(2);
@@ -697,6 +860,7 @@ def main():
             
             document.getElementById('cardPrice').innerText = latestPrice;
             document.getElementById('cardER').innerText = latestER;
+            document.getElementById('cardER').style.color = latestERColor;
             document.getElementById('cardFMLC').innerText = latestFMLC;
             document.getElementById('cardFlowprint').innerText = latestFP;
             document.getElementById('cardScore').innerText = latestScore;
@@ -705,8 +869,6 @@ def main():
             updateRegime();
         }}
         
-        let currentWindowDays = 3;
-
         function applyWindow(days, sd) {{
             const buttons = {{
                 1: 'btn-1d',
@@ -720,7 +882,7 @@ def main():
             }});
             const activeBtn = document.getElementById(buttons[days]);
             if (activeBtn) activeBtn.classList.add('active');
-
+        
             if (days === 0) {{
                 Plotly.relayout('chart', {{
                     'xaxis.range': null,
@@ -737,15 +899,32 @@ def main():
                 }});
             }}
         }}
-
+        
         function setWindow(days) {{
             currentWindowDays = days;
-            const symbol = document.getElementById('symbolSelect').value;
-            const sd = symbolsData[symbol];
+            const symbolsData = getSymbolsData();
+            const sd = symbolsData[currentSymbol];
             if(sd) applyWindow(days, sd);
         }}
         
+        function setInterval(interval) {{
+            currentInterval = interval;
+            
+            const btn1h = document.getElementById('btn-1h');
+            const btn30m = document.getElementById('btn-30m');
+            if (interval === '1h') {{
+                btn1h.classList.add('active');
+                btn30m.classList.remove('active');
+            }} else {{
+                btn1h.classList.remove('active');
+                btn30m.classList.add('active');
+            }}
+            
+            drawChart(currentSymbol);
+        }}
+        
         const sel = document.getElementById('symbolSelect');
+        const symbolsData = getSymbolsData();
         Object.keys(symbolsData).sort().forEach(sym => {{
             let opt = document.createElement('option');
             opt.value = sym; opt.innerHTML = sym;
@@ -785,8 +964,8 @@ This document audits the deployment of the Pulled 143 Evidence Viewer.
 
 ## 2. Dataset Metrics
 - **Inventory Symbols Loaded:** {len(valid_symbols)}
-- **Files Matched and Processed:** {len(export_symbols)}
-- **Missing Viewer Pages:** {len(valid_symbols) - len(export_symbols)}
+- **Files Matched and Processed:** {len(export_symbols_1h)}
+- **Missing Viewer Pages:** {len(valid_symbols) - len(export_symbols_1h)}
 - **Output HTML Size:** ~{os.path.getsize(OUT_HTML)/1024/1024:.2f} MB
 
 **PASS: PASS_PULLED_143_EVIDENCE_VIEWER_BUILD_COMPLETE**
