@@ -14,7 +14,7 @@ def fail_closed(reason):
     print(f"FAIL CLOSED: {reason}")
     sys.exit(1)
 
-def main():
+def main(write_reports=True):
     if '--dry-run' not in sys.argv:
         print("Notice: Script running in default mode, which is forced to --dry-run for Phase B.")
     
@@ -76,9 +76,10 @@ def main():
     else:
         schema_report += f"Successfully validated {len(scenarios)} scenarios.\n"
         
-    os.makedirs(os.path.dirname(SCHEMA_REPORT_PATH), exist_ok=True)
-    with open(SCHEMA_REPORT_PATH, 'w') as f:
-        f.write(schema_report)
+    if write_reports:
+        os.makedirs(os.path.dirname(SCHEMA_REPORT_PATH), exist_ok=True)
+        with open(SCHEMA_REPORT_PATH, 'w') as f:
+            f.write(schema_report)
         
     if not valid:
         fail_closed("Schema invalid. Check schema validation report.")
@@ -115,8 +116,9 @@ def main():
     for res in eval_results:
         dry_run_report += f"| {res['id']} | {res['status']} | {res['description']} |\n"
         
-    with open(DRY_RUN_REPORT_PATH, 'w') as f:
-        f.write(dry_run_report)
+    if write_reports:
+        with open(DRY_RUN_REPORT_PATH, 'w') as f:
+            f.write(dry_run_report)
         
     print("-" * 50)
     print("Dry-run complete. Reports generated.")

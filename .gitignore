@@ -50,3 +50,8 @@ scripts/visualization/build_top100_x2_research_viewer.py
 # FirestarterLive validation generated outputs
 reports/firestarter_live_audits/validation/
 scripts/**/__pycache__/
+
+# FirestarterLive Phase C runtime outputs
+reports/firestarterlive/firestarterlive_alert_events.jsonl
+reports/firestarterlive/firestarterlive_latest_status.json
+reports/firestarterlive/firestarterlive_daily_audit.md
