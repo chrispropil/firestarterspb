@@ -551,6 +551,20 @@ def main():
             font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
             line-height: 1.2;
         }}
+        .session-pill {{
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 9999px;
+            background-color: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+            transition: all 0.15s ease;
+        }}
+        input:focus {{
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }}
     </style>
 </head>
 <body>
@@ -558,12 +572,39 @@ def main():
         <h2>Pulled 143 Local Research Evidence Viewer</h2>
         <div class="controls">
             <div>
-                <label style="font-weight: 500; margin-right: 8px; font-size: 13px;">Symbol Selector:</label>
+                <label style="font-weight: 500; margin-right: 4px; font-size: 13px;">Group:</label>
+                <select id="groupSelect">
+                    <option value="Active / Priority">Active / Priority</option>
+                    <option value="Anchors">Anchors</option>
+                    <option value="Rotation">Rotation</option>
+                    <option value="High Beta / Watch">High Beta / Watch</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-weight: 500; margin-right: 4px; font-size: 13px;">Search:</label>
+                <input type="text" id="symbolSearch" placeholder="Search..." style="padding: 4px 8px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; width: 100px; outline: none; background-color: #ffffff; color: #1e293b;" />
+            </div>
+            <div>
+                <label style="font-weight: 500; margin-right: 4px; font-size: 13px;">Symbol:</label>
                 <select id="symbolSelect"></select>
             </div>
             <div>
                 <span id="regimeIndicator" style="font-weight: bold; padding: 5px 10px; border-radius: 3px; font-size: 12px;"></span>
             </div>
+        </div>
+    </div>
+    
+    <div id="timeSessionStrip" style="background: #ffffff; padding: 8px 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05); border: 1px solid #dbeafe; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 13px;">
+        <div style="display: flex; gap: 15px; align-items: center; font-weight: 500;">
+            <div>UTC: <span id="utcClock" style="font-family: monospace; font-weight: 700; color: #0f172a;">--:--:--</span></div>
+            <div style="color: #cbd5e1;">|</div>
+            <div>Eastern: <span id="easternClock" style="font-family: monospace; font-weight: 700; color: #0f172a;">--:--:--</span></div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <span id="pillAsia" class="session-pill">Asia</span>
+            <span id="pillLondon" class="session-pill">London</span>
+            <span id="pillNY" class="session-pill">New York</span>
+            <span id="pillOverlap" class="session-pill">London/NY Overlap</span>
         </div>
     </div>
     
@@ -788,6 +829,7 @@ def main():
                     text: symbol + ' Forensic Chart',
                     font: {{ color: '#f8fafc', size: 16, weight: 'bold' }}
                 }},
+                dragmode: 'pan',
                 height: 820,
                 paper_bgcolor: '#18181b',
                 plot_bgcolor: '#18181b',
@@ -973,18 +1015,125 @@ def main():
             drawChart(currentSymbol);
         }}
         
-        const sel = document.getElementById('symbolSelect');
-        const symbolsData = getSymbolsData();
-        Object.keys(symbolsData).sort().forEach(sym => {{
-            let opt = document.createElement('option');
-            opt.value = sym; opt.innerHTML = sym;
-            sel.appendChild(opt);
-        }});
+        const selGroup = document.getElementById('groupSelect');
+        const searchInput = document.getElementById('symbolSearch');
+        const selSymbol = document.getElementById('symbolSelect');
         
-        sel.addEventListener('change', (e) => drawChart(e.target.value));
-        if(Object.keys(symbolsData).length > 0) {{
-            drawChart(Object.keys(symbolsData).sort()[0]);
+        // Time & Trading Session Clock update
+        function updateTimeAndSessions() {{
+            const now = new Date();
+            
+            // Format UTC Time
+            const utcStr = now.toISOString().slice(11, 19);
+            document.getElementById('utcClock').innerText = utcStr;
+            
+            // Format Eastern Time using Intl.DateTimeFormat
+            const options = {{
+                timeZone: 'America/New_York',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            }};
+            const easternStr = new Intl.DateTimeFormat('en-US', options).format(now);
+            document.getElementById('easternClock').innerText = easternStr;
+            
+            // Get current UTC hour & minute
+            const utcHour = now.getUTCHours();
+            const utcMin = now.getUTCMinutes();
+            const utcDecimal = utcHour + utcMin / 60;
+            
+            // Session Statuses (UTC)
+            const isAsia = utcDecimal >= 0 && utcDecimal < 9;
+            const isLondon = utcDecimal >= 8 && utcDecimal < 16;
+            const isNY = utcDecimal >= 13 && utcDecimal < 21;
+            const isOverlap = isLondon && isNY;
+            
+            updatePill('pillAsia', isAsia, '#eab308', '#713f12'); // Yellow
+            updatePill('pillLondon', isLondon, '#10b981', '#ffffff'); // Green
+            updatePill('pillNY', isNY, '#3b82f6', '#ffffff'); // Blue
+            updatePill('pillOverlap', isOverlap, '#8b5cf6', '#ffffff'); // Purple
         }}
+        
+        function updatePill(id, isActive, bg, color) {{
+            const pill = document.getElementById(id);
+            if (isActive) {{
+                pill.style.backgroundColor = bg;
+                pill.style.color = color;
+                pill.style.borderColor = bg;
+            }} else {{
+                pill.style.backgroundColor = '#f1f5f9';
+                pill.style.color = '#64748b';
+                pill.style.borderColor = '#e2e8f0';
+            }}
+        }}
+        
+        // Start clock immediately and run every second
+        updateTimeAndSessions();
+        window.setInterval(updateTimeAndSessions, 1000);
+        
+        // 4 Group seeding configuration
+        const groupSeeds = {{
+            'Active / Priority': ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'DOGEUSDT', 'LINKUSDT', 'AVAXUSDT', 'BNBUSDT', 'AAVEUSDT', 'NEARUSDT'],
+            'Anchors': ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'],
+            'High Beta / Watch': ['PEPEUSDT', 'BONKUSDT', 'FLOKIUSDT']
+        }};
+        
+        function populateSymbols() {{
+            const symbolsData = getSymbolsData();
+            const currentGroup = selGroup.value;
+            const searchVal = searchInput.value.trim().toUpperCase();
+            
+            const allSymbols = Object.keys(symbolsData).sort();
+            const activeSet = new Set(groupSeeds['Active / Priority']);
+            const anchorSet = new Set(groupSeeds['Anchors']);
+            const watchSet = new Set(groupSeeds['High Beta / Watch']);
+            const rotationSymbols = allSymbols.filter(sym => !activeSet.has(sym) && !anchorSet.has(sym) && !watchSet.has(sym));
+            
+            const groups = {{
+                'Active / Priority': groupSeeds['Active / Priority'].filter(sym => symbolsData[sym]),
+                'Anchors': groupSeeds['Anchors'].filter(sym => symbolsData[sym]),
+                'High Beta / Watch': groupSeeds['High Beta / Watch'].filter(sym => symbolsData[sym]),
+                'Rotation': rotationSymbols
+            }};
+            
+            let groupSymbols = groups[currentGroup] || [];
+            
+            if (searchVal) {{
+                groupSymbols = groupSymbols.filter(sym => sym.includes(searchVal));
+            }}
+            
+            const prevSelected = selSymbol.value;
+            selSymbol.innerHTML = '';
+            
+            groupSymbols.forEach(sym => {{
+                let opt = document.createElement('option');
+                opt.value = sym; opt.innerHTML = sym;
+                selSymbol.appendChild(opt);
+            }});
+            
+            if (groupSymbols.includes(prevSelected)) {{
+                selSymbol.value = prevSelected;
+            }} else if (groupSymbols.length > 0) {{
+                if (!prevSelected && groupSymbols.includes('SOLUSDT')) {{
+                    selSymbol.value = 'SOLUSDT';
+                }} else {{
+                    selSymbol.value = groupSymbols[0];
+                }}
+            }}
+            
+            if (selSymbol.value) {{
+                drawChart(selSymbol.value);
+            }}
+        }}
+        
+        selGroup.addEventListener('change', populateSymbols);
+        searchInput.addEventListener('input', populateSymbols);
+        selSymbol.addEventListener('change', (e) => drawChart(e.target.value));
+        
+        // Initial setup
+        selGroup.value = 'Active / Priority';
+        populateSymbols();
     </script>
 </body>
 </html>
