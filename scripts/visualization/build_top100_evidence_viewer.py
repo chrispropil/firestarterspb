@@ -226,6 +226,7 @@ def process_symbol_interval(df_resample, symbol, interval_str, deriv_data):
     df_merged = merge_derivatives(df_all, deriv_data)
     df_merged = compute_cell1_metrics(df_merged)
     
+    df_merged['forming_count'] = 0
     df_merged['er_5m_preview_cumulative'] = np.nan
     if has_forming and not df_merged.empty:
         last_row = df_merged.iloc[-1]
@@ -244,6 +245,7 @@ def process_symbol_interval(df_resample, symbol, interval_str, deriv_data):
         er_preview = er_continuous * (forming_count / total_bars)
         
         df_merged.loc[df_merged.index[-1], 'er_5m_preview_cumulative'] = er_preview
+        df_merged.loc[df_merged.index[-1], 'forming_count'] = forming_count
         
         # Clear confirmed metrics for the provisional bar
         df_merged.loc[df_merged.index[-1], 'er'] = np.nan
@@ -265,6 +267,7 @@ def get_export_symbols(all_dfs, basket_regime):
         ers = df_merged['er'].tolist()
         scores = df_merged['raw_score'].tolist()
         er_preview = df_merged['er_5m_preview_cumulative'].tolist()
+        forming_counts = df_merged['forming_count'].tolist() if 'forming_count' in df_merged.columns else [0] * len(df_merged)
         
         entry_c = []
         fake_rec = []
@@ -313,6 +316,7 @@ def get_export_symbols(all_dfs, basket_regime):
             'er': ers,
             'score': scores,
             'er_5m_preview_cumulative': er_preview,
+            'forming_count': forming_counts,
             'entry_c': entry_c,
             'fake_rec': fake_rec
         }
@@ -626,13 +630,42 @@ def main():
         </div>
     </div>
 
-    <div id="chart"></div>
+    <div style="position: relative;">
+        <div id="pieClockContainer" style="position: absolute; right: 25px; top: 15px; z-index: 10; display: flex; gap: 8px; align-items: center;"></div>
+        <div id="chart"></div>
+    </div>
     
     <script>
         const exportData = {json.dumps(export_data)};
         let currentInterval = '1h';
         let currentWindowDays = 3;
         let currentSymbol = '';
+        
+        function getSectorPath(cx, cy, r, startAngleDegrees, endAngleDegrees) {{
+            const startAngleRad = (startAngleDegrees - 90) * Math.PI / 180;
+            const endAngleRad = (endAngleDegrees - 90) * Math.PI / 180;
+            
+            const x1 = cx + r * Math.cos(startAngleRad);
+            const y1 = cy + r * Math.sin(startAngleRad);
+            const x2 = cx + r * Math.cos(endAngleRad);
+            const y2 = cy + r * Math.sin(endAngleRad);
+            
+            return 'M ' + cx + ' ' + cy + ' L ' + x1 + ' ' + y1 + ' A ' + r + ' ' + r + ' 0 0 1 ' + x2 + ' ' + y2 + ' Z';
+        }}
+        
+        function createPieClockSVG(filledSegments) {{
+            const cx = 16, cy = 16, r = 14;
+            let paths = [];
+            for (let i = 0; i < 6; i++) {{
+                const startAngle = i * 60;
+                const endAngle = (i + 1) * 60;
+                const isFilled = i < filledSegments;
+                const color = isFilled ? '#eab308' : '#27272a';
+                const pathData = getSectorPath(cx, cy, r, startAngle, endAngle);
+                paths.push('<path d="' + pathData + '" fill="' + color + '" stroke="#18181b" stroke-width="1.5" />');
+            }}
+            return '<svg width="32" height="32" viewBox="0 0 32 32">' + paths.join('') + '</svg>';
+        }}
         
         function getSymbolsData() {{
             return currentInterval === '1h' ? exportData.symbols_1h : exportData.symbols_30m;
@@ -864,6 +897,23 @@ def main():
             document.getElementById('cardFMLC').innerText = latestFMLC;
             document.getElementById('cardFlowprint').innerText = latestFP;
             document.getElementById('cardScore').innerText = latestScore;
+            
+            const clockContainer = document.getElementById('pieClockContainer');
+            if (hasProvisional) {{
+                const provIndex = N - 1;
+                const formingCount = (sd.forming_count && sd.forming_count[provIndex]) || 0;
+                clockContainer.style.display = 'flex';
+                if (currentInterval === '30m') {{
+                    clockContainer.innerHTML = createPieClockSVG(formingCount);
+                }} else {{
+                    const clock1 = createPieClockSVG(Math.min(6, formingCount));
+                    const clock2 = createPieClockSVG(Math.max(0, formingCount - 6));
+                    clockContainer.innerHTML = clock1 + clock2;
+                }}
+            }} else {{
+                clockContainer.style.display = 'none';
+                clockContainer.innerHTML = '';
+            }}
             
             applyWindow(currentWindowDays, sd);
             updateRegime();
