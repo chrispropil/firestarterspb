@@ -31,7 +31,7 @@ def generate_static_html(export_data, out_path):
             color: #0f172a;
         }}
         .controls {{ display: flex; gap: 20px; align-items: center; }}
-        select {{ 
+        select, input[type="text"] {{ 
             padding: 6px 12px; 
             font-size: 15px; 
             border: 1px solid #cbd5e1; 
@@ -40,7 +40,7 @@ def generate_static_html(export_data, out_path):
             color: #1e293b;
             outline: none;
         }}
-        select:focus {{
+        select:focus, input[type="text"]:focus {{
             border-color: #3b82f6;
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }}
@@ -60,6 +60,9 @@ def generate_static_html(export_data, out_path):
             <div>
                 <label style="font-weight: 500; margin-right: 8px;">Symbol:</label>
                 <select id="symbolSelect"></select>
+            </div>
+            <div>
+                <input type="text" id="symbolSearch" placeholder="Search symbol...">
             </div>
             <div>
                 <span id="regimeIndicator" style="font-weight: bold; padding: 5px 10px; border-radius: 3px;"></span>
@@ -177,16 +180,68 @@ def generate_static_html(export_data, out_path):
             updateRegime();
         }}
         
+        const pinnedSymbols = ["SOLUSDT", "DOGEUSDT", "XRPUSDT", "LINKUSDT", "AVAXUSDT", "NEARUSDT", "BNBUSDT", "AAVEUSDT"];
         const sel = document.getElementById('symbolSelect');
-        Object.keys(symbolsData).sort().forEach(sym => {{
-            let opt = document.createElement('option');
-            opt.value = sym; opt.innerHTML = sym;
-            sel.appendChild(opt);
-        }});
+        const searchInput = document.getElementById('symbolSearch');
+        
+        function populateSelect(filterText = "") {{
+            const currentSelected = sel.value;
+            sel.innerHTML = "";
+            const allSyms = Object.keys(symbolsData);
+            const filtered = allSyms.filter(s => s.toLowerCase().includes(filterText.toLowerCase()));
+            
+            const pinned = filtered.filter(s => pinnedSymbols.includes(s)).sort();
+            const others = filtered.filter(s => !pinnedSymbols.includes(s)).sort();
+            
+            if(pinned.length > 0) {{
+                const grp = document.createElement('optgroup');
+                grp.label = "Pinned / Favorites";
+                pinned.forEach(sym => {{
+                    const opt = document.createElement('option');
+                    opt.value = sym;
+                    opt.innerHTML = sym;
+                    grp.appendChild(opt);
+                }});
+                sel.appendChild(grp);
+            }}
+            
+            if(others.length > 0) {{
+                const grp = document.createElement('optgroup');
+                grp.label = "All Other Symbols";
+                others.forEach(sym => {{
+                    const opt = document.createElement('option');
+                    opt.value = sym;
+                    opt.innerHTML = sym;
+                    grp.appendChild(opt);
+                }});
+                sel.appendChild(grp);
+            }}
+            
+            // Restore selection if still available in filtered list
+            if (filtered.includes(currentSelected)) {{
+                sel.value = currentSelected;
+            }}
+        }}
+        
+        populateSelect();
         
         sel.addEventListener('change', (e) => drawChart(e.target.value));
+        
+        searchInput.addEventListener('input', (e) => {{
+            const filterText = e.target.value;
+            populateSelect(filterText);
+            
+            // Draw chart for the first option in the new filtered list
+            if (sel.options.length > 0) {{
+                drawChart(sel.options[0].value);
+            }}
+        }});
+        
+        // Default loaded symbol should remain SOLUSDT if available, otherwise first available
         if(Object.keys(symbolsData).length > 0) {{
-            drawChart(Object.keys(symbolsData).sort()[0]);
+            const defaultSym = Object.keys(symbolsData).includes("SOLUSDT") ? "SOLUSDT" : Object.keys(symbolsData).sort()[0];
+            sel.value = defaultSym;
+            drawChart(defaultSym);
         }}
     </script>
 </body>

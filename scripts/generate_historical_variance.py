@@ -4,16 +4,29 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
+import time
+import shutil
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORTS_DIR = ROOT / "reports"
 CSV_OUTPUT = REPORTS_DIR / "firestarterog_real_historical_variance_sample.csv"
 MD_OUTPUT = REPORTS_DIR / "firestarterog_real_historical_variance_sample_audit.md"
 
-SYMBOLS = [
-    "SOLUSDT", "DOGEUSDT", "XRPUSDT", "LINKUSDT", 
-    "AVAXUSDT", "NEARUSDT", "BNBUSDT", "AAVEUSDT"
-]
+def load_symbols():
+    default_symbols = [
+        "SOLUSDT", "DOGEUSDT", "XRPUSDT", "LINKUSDT", 
+        "AVAXUSDT", "NEARUSDT", "BNBUSDT", "AAVEUSDT"
+    ]
+    config_path = ROOT / "configs" / "firestarter_core88_binance_usdt_symbols.txt"
+    if config_path.exists():
+        with open(config_path, "r", encoding="utf-8") as f:
+            symbols = [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
+        if symbols:
+            return symbols
+    return default_symbols
+
+SYMBOLS = load_symbols()
+
 
 def fetch_json(url, params=None):
     res = requests.get(url, params=params, timeout=15)
@@ -253,11 +266,24 @@ def process_symbol(symbol):
     return res_df
 
 def generate_and_audit():
+    # Safety Backup
+    if CSV_OUTPUT.exists():
+        archive_dir = REPORTS_DIR / "archive"
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        backup_path = archive_dir / f"firestarterog_real_historical_variance_sample_before_full_universe_{ts}.csv"
+        try:
+            shutil.copy2(CSV_OUTPUT, backup_path)
+            print(f"Created backup: {backup_path}")
+        except Exception as e:
+            print(f"Backup failed: {e}")
+
     all_dfs = []
     for symbol in SYMBOLS:
         try:
             df_sym = process_symbol(symbol)
             all_dfs.append(df_sym)
+            time.sleep(0.1)  # small sequential delay
         except Exception as e:
             print(f"Error processing {symbol}: {e}")
             
