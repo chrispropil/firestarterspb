@@ -265,8 +265,8 @@ def run_dry_run(symbols):
     print(f"Loaded symbols count: {len(symbols)}")
     
     if len(symbols) != 100:
-        print(f"[ERROR] Symbol count is not exactly 100! Found: {len(symbols)}")
-        sys.exit(1)
+        print(f"[WARNING] Symbol count is not exactly 100! Found: {len(symbols)}")
+
         
     print("\n--- VALIDATING API ENDPOINTS AND PATH ESTIMATIONS ---")
     total_estimated_requests = 0
@@ -314,8 +314,8 @@ def run_live_pull(symbols, period):
     print(f"Statistical Period: {period}")
     
     if len(symbols) != 100:
-        print(f"[ERROR] Symbol count is not exactly 100! Found: {len(symbols)}")
-        sys.exit(1)
+        print(f"[WARNING] Symbol count is not exactly 100! Found: {len(symbols)}")
+
         
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     
