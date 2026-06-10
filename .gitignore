@@ -19,3 +19,30 @@ reports/firestarter_live_audits/pattern_searches/
 !reports/firestarter_live_audits/templates/*.md
 !reports/firestarter_live_audits/samples/
 !reports/firestarter_live_audits/samples/*.csv
+
+# Generated research scripts (check/patch artifacts)
+check_core88_*.py
+patch_core88_*.py
+scratch_validate.py
+
+# Data bundles and research outputs
+data/a4_bundle/
+data/research/*/
+
+# Report artifacts (non-Markdown)
+reports/*.csv
+reports/*.zip
+reports/html/
+reports/automation/
+reports/profile_event_scanner/
+reports/x2_patch_bundle/
+
+# Python cache
+scripts/__pycache__/
+scripts/binance_spb/__pycache__/
+scripts/visualization/__pycache__/
+
+# Ad-hoc runner scripts
+scripts/run_*.py
+scripts/firestarter_a4_evidence_viewer.py
+scripts/visualization/build_top100_x2_research_viewer.py
