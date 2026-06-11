@@ -180,7 +180,7 @@ def generate_static_html(export_data, out_path):
             updateRegime();
         }}
         
-        const pinnedSymbols = ["SOLUSDT", "DOGEUSDT", "XRPUSDT", "LINKUSDT", "AVAXUSDT", "NEARUSDT", "BNBUSDT", "AAVEUSDT"];
+        const pinnedSymbols = ["1000SHIBUSDT", "AAVEUSDT", "ADAUSDT", "APTUSDT", "ARBUSDT", "ATOMUSDT", "AVAXUSDT", "BCHUSDT", "BNBUSDT", "BTCUSDT", "DOGEUSDT", "DOTUSDT", "ETHUSDT", "INJUSDT", "LINKUSDT", "LTCUSDT", "NEARUSDT", "OPUSDT", "RENDERUSDT", "SOLUSDT", "SUIUSDT", "TIAUSDT", "TRXUSDT", "UNIUSDT", "XRPUSDT", "FILUSDT", "ICPUSDT", "SEIUSDT", "FETUSDT", "ALGOUSDT", "XLMUSDT", "HBARUSDT", "ETCUSDT", "STXUSDT", "VETUSDT", "RUNEUSDT", "SANDUSDT", "MANAUSDT", "AXSUSDT", "WLDUSDT", "JUPUSDT", "PYTHUSDT", "DYDXUSDT", "LDOUSDT", "ENAUSDT", "ORDIUSDT", "WIFUSDT", "1000BONKUSDT", "1000PEPEUSDT", "EGLDUSDT"];
         const sel = document.getElementById('symbolSelect');
         const searchInput = document.getElementById('symbolSearch');
         
