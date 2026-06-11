@@ -569,7 +569,7 @@ def main():
 </head>
 <body>
     <div class="header">
-        <h2>Pulled 143 Local Research Evidence Viewer</h2>
+        <h2 style="font-weight: 900; letter-spacing: 0.05em;"><span style="color: #0f172a;">F</span><span style="color: #ef4444;">L</span><span style="color: #0f172a;">A</span><span style="color: #ef4444;">M</span><span style="color: #0f172a;">E</span><span style="color: #ef4444;">S</span><span style="color: #0f172a;">I</span><span style="color: #ef4444;">G</span><span style="color: #0f172a;">N</span><span style="color: #ef4444;">A</span><span style="color: #0f172a;">L</span></h2>
         <div class="controls">
             <div>
                 <label style="font-weight: 500; margin-right: 4px; font-size: 13px;">Group:</label>
@@ -593,21 +593,6 @@ def main():
             </div>
         </div>
     </div>
-    
-    <div id="timeSessionStrip" style="background: #ffffff; padding: 8px 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05); border: 1px solid #dbeafe; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 13px;">
-        <div style="display: flex; gap: 15px; align-items: center; font-weight: 500;">
-            <div>UTC: <span id="utcClock" style="font-family: monospace; font-weight: 700; color: #0f172a;">--:--:--</span></div>
-            <div style="color: #cbd5e1;">|</div>
-            <div>Eastern: <span id="easternClock" style="font-family: monospace; font-weight: 700; color: #0f172a;">--:--:--</span></div>
-        </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
-            <span id="pillAsia" class="session-pill">Asia</span>
-            <span id="pillLondon" class="session-pill">London</span>
-            <span id="pillNY" class="session-pill">New York</span>
-            <span id="pillOverlap" class="session-pill">London/NY Overlap</span>
-        </div>
-    </div>
-    
     <div class="metric-cards">
         <div class="metric-card" style="border-left: 4px solid #3b82f6;">
             <span class="mc-label">Price (Latest)</span>
@@ -671,8 +656,22 @@ def main():
         </div>
     </div>
 
+    <div id="timeSessionStrip" style="background: #18181b; border: 1px solid #3f3f46; border-radius: 6px; padding: 4px 10px; margin: 6px 0 8px 0; font-size: 11px; display: flex; justify-content: space-between; align-items: center; color: #cbd5e1;">
+        <div style="display: flex; gap: 15px; align-items: center; font-weight: 500;">
+            <div>UTC: <span id="utcClock" style="font-family: monospace; font-weight: 700; color: #ffffff;">--:--:--</span></div>
+            <div style="color: #3f3f46;">|</div>
+            <div>Eastern: <span id="easternClock" style="font-family: monospace; font-weight: 700; color: #ffffff;">--:--:--</span></div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <span id="pillAsia" class="session-pill">Asia</span>
+            <span id="pillLondon" class="session-pill">London</span>
+            <span id="pillNY" class="session-pill">New York</span>
+            <span id="pillOverlap" class="session-pill">London/NY Overlap</span>
+        </div>
+    </div>
+
     <div style="position: relative;">
-        <div id="pieClockContainer" style="position: absolute; right: 25px; top: 15px; z-index: 10; display: flex; gap: 8px; align-items: center;"></div>
+        <div id="pieClockContainer" style="position: absolute; right: 25px; top: 75px; z-index: 10; display: flex; gap: 8px; align-items: center;"></div>
         <div id="chart"></div>
     </div>
     
@@ -834,8 +833,9 @@ def main():
                 paper_bgcolor: '#18181b',
                 plot_bgcolor: '#18181b',
                 xaxis: {{
-                    title: {{ text: 'Timestamp UTC', font: {{ color: '#94a3b8' }} }},
+                    title: {{ text: '', font: {{ color: '#94a3b8' }} }},
                     tickfont: {{ color: '#94a3b8' }},
+                    side: 'top',
                     gridcolor: '#27272a',
                     showspikes: true,
                     spikemode: 'across',
@@ -1062,9 +1062,9 @@ def main():
                 pill.style.color = color;
                 pill.style.borderColor = bg;
             }} else {{
-                pill.style.backgroundColor = '#f1f5f9';
-                pill.style.color = '#64748b';
-                pill.style.borderColor = '#e2e8f0';
+                pill.style.backgroundColor = '#27272a';
+                pill.style.color = '#a1a1aa';
+                pill.style.borderColor = '#3f3f46';
             }}
         }}
         
