@@ -2,10 +2,11 @@ import os
 import glob
 import sys
 import json
+import time
 import pandas as pd
 import numpy as np
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Configure stdout encoding to prevent Unicode errors on Windows
 sys.stdout.reconfigure(encoding='utf-8')
@@ -186,21 +187,46 @@ def process_symbol_interval(df_resample, symbol, interval_str, deriv_data):
         'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last', 'volume': 'sum'
     }).dropna()
     
+    delta = pd.Timedelta(hours=1) if interval_str.lower() == '1h' else pd.Timedelta(minutes=30)
+    
+    # Check completeness and derivatives availability of the last resampled bar recursively
+    while not df_confirmed.empty:
+        last_confirmed_time = df_confirmed.index[-1]
+        last_bin_klines = df_resample.loc[(df_resample.index >= last_confirmed_time) & (df_resample.index < last_confirmed_time + delta)]
+        expected_klines = 12 if interval_str.lower() == '1h' else 6
+        
+        has_deriv = True
+        if "takerlongshortRatio" in deriv_data:
+            df_t = deriv_data["takerlongshortRatio"]
+            if not df_t.empty and "datetime" in df_t.columns:
+                diffs = (df_t["datetime"] - last_confirmed_time).abs()
+                if not (diffs <= pd.Timedelta("50Min")).any():
+                    has_deriv = False
+            else:
+                has_deriv = False
+        else:
+            has_deriv = False
+            
+        if len(last_bin_klines) < expected_klines or not has_deriv:
+            df_confirmed = df_confirmed.drop(last_confirmed_time)
+        else:
+            break
+            
     if not df_confirmed.empty:
         last_confirmed_time = df_confirmed.index[-1]
-        df_forming = df_resample.loc[df_resample.index > last_confirmed_time]
+        df_forming = df_resample.loc[df_resample.index >= last_confirmed_time + delta]
         
         # total bars in interval: 12 for 1h, 6 for 30m
         total_bars = 12 if interval_str.lower() == '1h' else 6
         
-        if not df_forming.empty and len(df_forming) < total_bars:
-            forming_open = df_forming['open'].iloc[0]
-            forming_close = df_forming['close'].iloc[-1]
-            forming_high = df_forming['high'].max()
-            forming_low = df_forming['low'].min()
-            forming_vol = df_forming['volume'].sum()
+        if not df_forming.empty:
+            df_forming_slice = df_forming.iloc[:total_bars]
+            forming_open = df_forming_slice['open'].iloc[0]
+            forming_close = df_forming_slice['close'].iloc[-1]
+            forming_high = df_forming_slice['high'].max()
+            forming_low = df_forming_slice['low'].min()
+            forming_vol = df_forming_slice['volume'].sum()
             
-            delta = pd.Timedelta(hours=1) if interval_str.lower() == '1h' else pd.Timedelta(minutes=30)
             forming_time = last_confirmed_time + delta
             
             df_forming_row = pd.DataFrame([{
@@ -213,7 +239,7 @@ def process_symbol_interval(df_resample, symbol, interval_str, deriv_data):
             
             df_all = pd.concat([df_confirmed, df_forming_row])
             has_forming = True
-            forming_count = len(df_forming)
+            forming_count = len(df_forming_slice)
         else:
             df_all = df_confirmed.copy()
             has_forming = False
@@ -252,6 +278,20 @@ def process_symbol_interval(df_resample, symbol, interval_str, deriv_data):
         df_merged.loc[df_merged.index[-1], 'fmlc'] = np.nan
         df_merged.loc[df_merged.index[-1], 'flowprint'] = np.nan
         df_merged.loc[df_merged.index[-1], 'raw_score'] = np.nan
+        
+    # Calculate current active interval progress
+    if not df_resample.empty:
+        latest_raw_ts = df_resample.index[-1]
+        floor_freq = "h" if interval_str.lower() == "1h" else "30min"
+        active_interval_start = latest_raw_ts.floor(floor_freq)
+        raw_candles_active = df_resample.loc[df_resample.index >= active_interval_start]
+        progress_count = len(raw_candles_active)
+        progress_count = min(total_bars, max(0, progress_count))
+    else:
+        progress_count = 0
+        
+    df_merged['pie_progress_count'] = progress_count
+    df_merged['pie_total_count'] = total_bars
         
     return df_merged
 
@@ -305,6 +345,9 @@ def get_export_symbols(all_dfs, basket_regime):
         highs = df_merged['high'].tolist()
         lows = df_merged['low'].tolist()
         
+        pie_progress = int(df_merged['pie_progress_count'].iloc[-1]) if 'pie_progress_count' in df_merged.columns else 0
+        pie_total = int(df_merged['pie_total_count'].iloc[-1]) if 'pie_total_count' in df_merged.columns else 12
+        
         export_symbols[symbol] = {
             'time': times,
             'price': prices,
@@ -317,6 +360,8 @@ def get_export_symbols(all_dfs, basket_regime):
             'score': scores,
             'er_5m_preview_cumulative': er_preview,
             'forming_count': forming_counts,
+            'pie_progress_count': pie_progress,
+            'pie_total_count': pie_total,
             'entry_c': entry_c,
             'fake_rec': fake_rec
         }
@@ -589,7 +634,10 @@ def main():
                 <select id="symbolSelect"></select>
             </div>
             <div>
-                <span id="regimeIndicator" style="font-weight: bold; padding: 5px 10px; border-radius: 3px; font-size: 12px;"></span>
+                <span id="regimeIndicator" style="font-weight: bold; padding: 5px 10px; border-radius: 3px; font-size: 12px; display: none;"></span>
+            </div>
+            <div>
+                <span id="liveStatusIndicator" style="font-weight: bold; padding: 5px 10px; border-radius: 6px; font-size: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; color: #64748b; font-family: monospace; display: inline-block;">Live: Connecting...</span>
             </div>
         </div>
     </div>
@@ -680,6 +728,166 @@ def main():
         let currentInterval = '1h';
         let currentWindowDays = 3;
         let currentSymbol = '';
+        let activeRowIndex = -1;
+        let isKeyboardActive = false;
+
+        function getLayoutShapes(selectedTime) {{
+            const baseShapes = [
+                {{ type: 'rect', xref: 'paper', yref: 'paper', x0: 0, y0: 0.58, x1: 1, y1: 1.00, line: {{color: '#000000', width: 2}} }},
+                {{ type: 'rect', xref: 'paper', yref: 'paper', x0: 0, y0: 0.28, x1: 1, y1: 0.54, line: {{color: '#000000', width: 2}} }},
+                {{ type: 'rect', xref: 'paper', yref: 'paper', x0: 0, y0: 0.00, x1: 1, y1: 0.22, line: {{color: '#000000', width: 2}} }}
+            ];
+            if (isKeyboardActive && selectedTime) {{
+                baseShapes.push({{
+                    type: 'line',
+                    xref: 'x',
+                    yref: 'paper',
+                    x0: selectedTime,
+                    x1: selectedTime,
+                    y0: 0,
+                    y1: 1,
+                    line: {{
+                        color: 'rgba(255, 255, 255, 0.75)',
+                        width: 2
+                    }}
+                }});
+            }}
+            return baseShapes;
+        }}
+
+        function updateReadout(ptIndex, sd) {{
+            if (!sd) return;
+            const time = sd.time[ptIndex];
+            const price = sd.price[ptIndex];
+            const fmlc = sd.fmlc[ptIndex];
+            const fp = sd.fp[ptIndex];
+            const er = sd.er[ptIndex];
+            const score = sd.score[ptIndex];
+            const erProv = sd.er_5m_preview_cumulative[ptIndex];
+            
+            document.getElementById('roTime').innerText = time;
+            document.getElementById('roPrice').innerText = price !== null ? price.toFixed(4) : '-';
+            
+            if (erProv !== null) {{
+                document.getElementById('roER').innerText = erProv.toFixed(1) + " (Prov)";
+                document.getElementById('roER').style.color = "#eab308";
+            }} else {{
+                document.getElementById('roER').innerText = er !== null ? er.toFixed(2) : '-';
+                document.getElementById('roER').style.color = "#ef4444";
+            }}
+            
+            document.getElementById('roFMLC').innerText = fmlc !== null ? fmlc.toFixed(2) : '-';
+            document.getElementById('roFlowprint').innerText = fp !== null ? fp.toFixed(2) : '-';
+            document.getElementById('roScore').innerText = score !== null ? score.toFixed(2) : '-';
+        }}
+
+        function updateRowHighlight(ptIndex, sd) {{
+            if (!sd) return;
+            const timeVal = sd.time[ptIndex];
+            const priceVal = sd.price[ptIndex];
+            const scoreVal = sd.score[ptIndex];
+            const erVal = sd.er[ptIndex];
+            
+            // Re-render layout shapes
+            const newShapes = getLayoutShapes(timeVal);
+            
+            // Update the cursor dots data
+            const gd = document.getElementById('chart');
+            const totalTraces = gd.data.length;
+            
+            const dotUpdates = {{
+                x: [[timeVal], [timeVal], [timeVal]],
+                y: [[priceVal], [scoreVal], [erVal]]
+            }};
+            
+            Plotly.update('chart', dotUpdates, {{ shapes: newShapes }}, [totalTraces - 3, totalTraces - 2, totalTraces - 1]);
+
+            Plotly.Fx.hover('chart', [
+                {{ curveNumber: 1, pointIndex: ptIndex }}
+            ]);
+            updateReadout(ptIndex, sd);
+        }}
+
+        document.getElementById('chart').addEventListener('click', function() {{
+            const gd = document.getElementById('chart');
+            const dragMode = (gd.layout && gd.layout.dragmode) || 'pan';
+            if (dragMode !== 'pan') return;
+
+            isKeyboardActive = true;
+            gd.style.borderColor = '#3b82f6';
+            gd.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.5)';
+            gd.style.outline = 'none';
+            
+            const sd = getSymbolsData()[currentSymbol];
+            if (sd) {{
+                if (activeRowIndex === -1) {{
+                    const N = sd.time.length;
+                    const hasProvisional = N > 0 && sd.er_5m_preview_cumulative[N-1] !== null;
+                    activeRowIndex = hasProvisional ? N - 2 : N - 1;
+                }}
+                updateRowHighlight(activeRowIndex, sd);
+            }}
+        }});
+
+        document.addEventListener('keydown', function(event) {{
+            if (event.key === 'Escape') {{
+                isKeyboardActive = false;
+                const gd = document.getElementById('chart');
+                if (gd) {{
+                    gd.style.borderColor = '#000000';
+                    gd.style.boxShadow = 'none';
+                    gd.style.outline = 'none';
+                    
+                    // Re-render layout shapes without the active cursor line
+                    const newShapes = getLayoutShapes(null);
+                    
+                    // Clear the cursor dots data
+                    const totalTraces = gd.data.length;
+                    const clearUpdates = {{
+                        x: [[], [], []],
+                        y: [[], [], []]
+                    }};
+                    Plotly.update('chart', clearUpdates, {{ shapes: newShapes }}, [totalTraces - 3, totalTraces - 2, totalTraces - 1]);
+                }}
+                Plotly.Fx.hover('chart', []);
+                activeRowIndex = -1;
+                document.getElementById('roTime').innerText = "Hover chart...";
+                document.getElementById('roPrice').innerText = "-";
+                document.getElementById('roER').innerText = "-";
+                document.getElementById('roFMLC').innerText = "-";
+                document.getElementById('roFlowprint').innerText = "-";
+                document.getElementById('roScore').innerText = "-";
+                return;
+            }}
+            
+            if (!isKeyboardActive) return;
+            
+            const sd = getSymbolsData()[currentSymbol];
+            if (!sd || sd.time.length === 0) return;
+            
+            const N = sd.time.length;
+            const hasProvisional = N > 0 && sd.er_5m_preview_cumulative[N-1] !== null;
+            const maxConfirmedIdx = hasProvisional ? N - 2 : N - 1;
+            if (maxConfirmedIdx < 0) return;
+            
+            let step = 0;
+            if (event.key === 'ArrowLeft') {{
+                step = event.shiftKey ? -5 : -1;
+            }} else if (event.key === 'ArrowRight') {{
+                step = event.shiftKey ? 5 : 1;
+            }} else if (event.key === 'Home') {{
+                activeRowIndex = 0;
+            }} else if (event.key === 'End') {{
+                activeRowIndex = maxConfirmedIdx;
+            }} else {{
+                return;
+            }}
+            
+            event.preventDefault();
+            activeRowIndex = Math.max(0, Math.min(maxConfirmedIdx, activeRowIndex + step));
+            updateRowHighlight(activeRowIndex, sd);
+        }});
+
         
         function getSectorPath(cx, cy, r, startAngleDegrees, endAngleDegrees) {{
             const startAngleRad = (startAngleDegrees - 90) * Math.PI / 180;
@@ -724,6 +932,14 @@ def main():
         }}
 
         function drawChart(symbol) {{
+            activeRowIndex = -1;
+            isKeyboardActive = false;
+            const gd = document.getElementById('chart');
+            if (gd) {{
+                gd.style.borderColor = '#000000';
+                gd.style.boxShadow = 'none';
+                gd.style.outline = 'none';
+            }}
             currentSymbol = symbol;
             const symbolsData = getSymbolsData();
             const basketRegime = getBasketRegime();
@@ -823,6 +1039,23 @@ def main():
                 data.push(traceCandleProv, tracePriceProv, traceERProv);
             }}
             
+            const traceCursorDot1 = {{
+                x: [], y: [], name: 'Cursor Dot 1', type: 'scatter', mode: 'markers', yaxis: 'y',
+                marker: {{ color: '#ffffff', size: 7, line: {{ color: '#18181b', width: 1.5 }} }},
+                showlegend: false, hoverinfo: 'none'
+            }};
+            const traceCursorDot2 = {{
+                x: [], y: [], name: 'Cursor Dot 2', type: 'scatter', mode: 'markers', yaxis: 'y2',
+                marker: {{ color: '#ffffff', size: 7, line: {{ color: '#18181b', width: 1.5 }} }},
+                showlegend: false, hoverinfo: 'none'
+            }};
+            const traceCursorDot3 = {{
+                x: [], y: [], name: 'Cursor Dot 3', type: 'scatter', mode: 'markers', yaxis: 'y3',
+                marker: {{ color: '#ffffff', size: 7, line: {{ color: '#18181b', width: 1.5 }} }},
+                showlegend: false, hoverinfo: 'none'
+            }};
+            data.push(traceCursorDot1, traceCursorDot2, traceCursorDot3);
+
             const layout = {{
                 title: {{
                     text: symbol + ' Forensic Chart',
@@ -873,11 +1106,7 @@ def main():
                 legend: {{
                     font: {{ color: '#cbd5e1' }}
                 }},
-                shapes: [
-                    {{ type: 'rect', xref: 'paper', yref: 'paper', x0: 0, y0: 0.58, x1: 1, y1: 1.00, line: {{color: '#000000', width: 2}} }},
-                    {{ type: 'rect', xref: 'paper', yref: 'paper', x0: 0, y0: 0.28, x1: 1, y1: 0.54, line: {{color: '#000000', width: 2}} }},
-                    {{ type: 'rect', xref: 'paper', yref: 'paper', x0: 0, y0: 0.00, x1: 1, y1: 0.22, line: {{color: '#000000', width: 2}} }}
-                ]
+                shapes: getLayoutShapes(null)
             }};
             
             Plotly.newPlot('chart', data, layout);
@@ -885,28 +1114,8 @@ def main():
             document.getElementById('chart').on('plotly_hover', function(hoverData){{
                 if(hoverData.points.length > 0) {{
                     const ptIndex = hoverData.points[0].pointIndex;
-                    const time = sd.time[ptIndex];
-                    const price = sd.price[ptIndex];
-                    const fmlc = sd.fmlc[ptIndex];
-                    const fp = sd.fp[ptIndex];
-                    const er = sd.er[ptIndex];
-                    const score = sd.score[ptIndex];
-                    const erProv = sd.er_5m_preview_cumulative[ptIndex];
-                    
-                    document.getElementById('roTime').innerText = time;
-                    document.getElementById('roPrice').innerText = price !== null ? price.toFixed(4) : '-';
-                    
-                    if (erProv !== null) {{
-                        document.getElementById('roER').innerText = erProv.toFixed(1) + " (Prov)";
-                        document.getElementById('roER').style.color = "#eab308";
-                    }} else {{
-                        document.getElementById('roER').innerText = er !== null ? er.toFixed(2) : '-';
-                        document.getElementById('roER').style.color = "#ef4444";
-                    }}
-                    
-                    document.getElementById('roFMLC').innerText = fmlc !== null ? fmlc.toFixed(2) : '-';
-                    document.getElementById('roFlowprint').innerText = fp !== null ? fp.toFixed(2) : '-';
-                    document.getElementById('roScore').innerText = score !== null ? score.toFixed(2) : '-';
+                    activeRowIndex = ptIndex;
+                    updateReadout(ptIndex, sd);
                 }}
             }});
             
@@ -943,15 +1152,21 @@ def main():
             const clockContainer = document.getElementById('pieClockContainer');
             if (hasProvisional) {{
                 const provIndex = N - 1;
-                const formingCount = (sd.forming_count && sd.forming_count[provIndex]) || 0;
+                const progressCount = sd.pie_progress_count !== undefined ? sd.pie_progress_count : ((sd.forming_count && sd.forming_count[provIndex]) || 0);
+                const totalCount = sd.pie_total_count || (currentInterval === '30m' ? 6 : 12);
                 clockContainer.style.display = 'flex';
+                let clocksHtml = '';
                 if (currentInterval === '30m') {{
-                    clockContainer.innerHTML = createPieClockSVG(formingCount);
+                    clocksHtml = createPieClockSVG(progressCount);
                 }} else {{
-                    const clock1 = createPieClockSVG(Math.min(6, formingCount));
-                    const clock2 = createPieClockSVG(Math.max(0, formingCount - 6));
-                    clockContainer.innerHTML = clock1 + clock2;
+                    const clock1 = createPieClockSVG(Math.min(6, progressCount));
+                    const clock2 = createPieClockSVG(Math.max(0, progressCount - 6));
+                    clocksHtml = clock1 + clock2;
                 }}
+                if (progressCount === totalCount) {{
+                    clocksHtml += '<span style="color: #eab308; font-size: 10px; font-weight: 700; margin-left: 4px; background: rgba(234, 179, 8, 0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(234, 179, 8, 0.2); white-space: nowrap;">Waiting Derivatives</span>';
+                }}
+                clockContainer.innerHTML = clocksHtml;
             }} else {{
                 clockContainer.style.display = 'none';
                 clockContainer.innerHTML = '';
@@ -1131,9 +1346,157 @@ def main():
         searchInput.addEventListener('input', populateSymbols);
         selSymbol.addEventListener('change', (e) => drawChart(e.target.value));
         
+        let currentBuildId = null;
+        let lastBuildTime = null;
+        let countdownSeconds = 30;
+        
+        function updateLiveStatus(status, extraText) {{
+            const el = document.getElementById('liveStatusIndicator');
+            if (!el) return;
+            
+            let bg = "#f1f5f9";
+            let color = "#64748b";
+            let border = "#cbd5e1";
+            
+            if (status === 'current') {{
+                bg = "#ecfdf5";
+                color = "#059669";
+                border = "#a7f3d0";
+            }} else if (status === 'updating') {{
+                bg = "#fffbeb";
+                color = "#d97706";
+                border = "#fde68a";
+            }} else if (status === 'stale') {{
+                bg = "#fef2f2";
+                color = "#dc2626";
+                border = "#fca5a5";
+            }}
+            
+            el.style.backgroundColor = bg;
+            el.style.color = color;
+            el.style.borderColor = border;
+            el.innerText = extraText;
+        }}
+        
+        function startLivePolling() {{
+            // Get initial build details
+            fetch('viewer_manifest.json')
+                .then(r => r.json())
+                .then(manifest => {{
+                    currentBuildId = manifest.build_id;
+                    lastBuildTime = manifest.updated_at_utc;
+                    updateLiveStatus('current', `Live: Current | Updated: ${{formatUTCTime(lastBuildTime)}} | Next Poll: ${{countdownSeconds}}s`);
+                }})
+                .catch(err => {{
+                    currentBuildId = 0;
+                    updateLiveStatus('stale', 'Live: Local File Mode (No Server)');
+                }});
+                
+            window.setInterval(tickCountdown, 1000);
+        }}
+        
+        function formatUTCTime(isoStr) {{
+            if (!isoStr) return "N/A";
+            try {{
+                return isoStr.split('T')[1].slice(0, 8) + " UTC";
+            }} catch(e) {{
+                return isoStr;
+            }}
+        }}
+
+        function tickCountdown() {{
+            if (currentBuildId === 0) {{
+                updateLiveStatus('stale', 'Live: Local File Mode (No Server)');
+                return;
+            }}
+            
+            countdownSeconds--;
+            if (countdownSeconds <= 0) {{
+                countdownSeconds = 30;
+                pollManifest();
+            }} else {{
+                updateLiveStatus('current', `Live: Current | Updated: ${{formatUTCTime(lastBuildTime)}} | Next Poll: ${{countdownSeconds}}s`);
+            }}
+        }}
+        
+        function pollManifest() {{
+            updateLiveStatus('updating', `Live: Checking updates...`);
+            fetch('viewer_manifest.json?t=' + Date.now())
+                .then(r => r.json())
+                .then(manifest => {{
+                    if (manifest.build_id !== currentBuildId) {{
+                        updateLiveStatus('updating', 'Live: Fetching new data...');
+                        fetchDataAndRefresh(manifest);
+                    }} else {{
+                        lastBuildTime = manifest.updated_at_utc;
+                        updateLiveStatus('current', `Live: Current | Updated: ${{formatUTCTime(lastBuildTime)}} | Next Poll: 30s`);
+                    }}
+                }})
+                .catch(err => {{
+                    updateLiveStatus('stale', 'Live: Connection Stale | Retrying...');
+                }});
+        }}
+        
+        function fetchDataAndRefresh(manifest) {{
+            fetch('viewer_data.json?t=' + Date.now())
+                .then(r => r.json())
+                .then(newData => {{
+                    exportData.symbols_1h = newData.symbols_1h;
+                    exportData.symbols_30m = newData.symbols_30m;
+                    exportData.basket_regime_1h = newData.basket_regime_1h;
+                    exportData.basket_regime_30m = newData.basket_regime_30m;
+                    
+                    currentBuildId = manifest.build_id;
+                    lastBuildTime = manifest.updated_at_utc;
+                    
+                    const gd = document.getElementById('chart');
+                    let savedRange = null;
+                    if (gd && gd.layout && gd.layout.xaxis && gd.layout.xaxis.range) {{
+                        savedRange = gd.layout.xaxis.range;
+                    }}
+                    
+                    let selectedTime = null;
+                    const oldSd = getSymbolsData()[currentSymbol];
+                    if (isKeyboardActive && activeRowIndex !== -1 && oldSd && oldSd.time) {{
+                        selectedTime = oldSd.time[activeRowIndex];
+                    }}
+                    
+                    drawChart(currentSymbol);
+                    
+                    if (savedRange) {{
+                        Plotly.relayout('chart', {{
+                            'xaxis.range': savedRange,
+                            'xaxis.autorange': false
+                        }});
+                    }}
+                    
+                    if (selectedTime) {{
+                        const newSd = getSymbolsData()[currentSymbol];
+                        if (newSd && newSd.time) {{
+                            const newIdx = newSd.time.indexOf(selectedTime);
+                            if (newIdx !== -1) {{
+                                activeRowIndex = newIdx;
+                            }} else {{
+                                const N = newSd.time.length;
+                                const hasProvisional = N > 0 && newSd.er_5m_preview_cumulative[N-1] !== null;
+                                const maxConfirmedIdx = hasProvisional ? N - 2 : N - 1;
+                                activeRowIndex = Math.max(0, Math.min(maxConfirmedIdx, activeRowIndex));
+                            }}
+                            updateRowHighlight(activeRowIndex, newSd);
+                        }}
+                    }}
+                    
+                    updateLiveStatus('current', `Live: Current | Updated: ${{formatUTCTime(lastBuildTime)}} | Next Poll: 30s`);
+                }})
+                .catch(err => {{
+                    updateLiveStatus('stale', 'Live: Data Fetch Error');
+                }});
+        }}
+
         // Initial setup
         selGroup.value = 'Active / Priority';
         populateSymbols();
+        startLivePolling();
     </script>
 </body>
 </html>
@@ -1142,6 +1505,43 @@ def main():
         f.write(html_content)
     
     print(f"Generated Pulled 143 Evidence Viewer at {OUT_HTML}")
+
+    # Write json data and manifest for live auto-refresh
+    viewer_dir = os.path.dirname(OUT_HTML)
+    data_json_path = os.path.join(viewer_dir, "viewer_data.json")
+    manifest_json_path = os.path.join(viewer_dir, "viewer_manifest.json")
+    
+    with open(data_json_path, 'w', encoding='utf-8') as f:
+        json.dump(export_data, f)
+    print(f"Generated viewer_data.json at {data_json_path}")
+    
+    # Load state to populate manifest
+    state_path = "C:/firestarterspb/state/firesignal_update_state.json"
+    latest_raw_close = "N/A"
+    latest_deriv = "N/A"
+    if os.path.exists(state_path):
+        try:
+            with open(state_path, 'r', encoding='utf-8') as sf:
+                state_data = json.load(sf)
+                latest_raw_close = state_data.get("last_successful_5m_close_utc", "N/A")
+                latest_deriv = state_data.get("last_taker_long_short_context_utc", "N/A")
+        except:
+            pass
+            
+    build_id = int(time.time())
+    
+    manifest_data = {
+        "updated_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "latest_raw_5m_close_utc": latest_raw_close,
+        "latest_derivatives_context_utc": latest_deriv,
+        "data_file": "viewer_data.json",
+        "build_id": build_id,
+        "viewer_path": OUT_HTML
+    }
+    
+    with open(manifest_json_path, 'w', encoding='utf-8') as f:
+        json.dump(manifest_data, f, indent=4)
+    print(f"Generated viewer_manifest.json at {manifest_json_path}")
 
     audit_report = f"""# Pulled 143 Evidence Viewer Build Audit
 

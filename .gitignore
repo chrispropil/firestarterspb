@@ -58,3 +58,7 @@ reports/firestarterlive/firestarterlive_daily_audit.md
 
 # Generated report archives
 reports/archive/
+
+# Cleanup ignored directories
+logs/
+state/
