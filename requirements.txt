@@ -1,1 +1,5 @@
+numpy
+pandas
+python-dateutil
+tzdata
 PyYAML>=6.0
