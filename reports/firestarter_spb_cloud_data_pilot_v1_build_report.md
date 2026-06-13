@@ -36,7 +36,8 @@ PASS: Cloud Data Pilot v1 dry-run-first scaffold is ready for review.
 - Scoring changes: `false`
 - Trading execution: `false`
 - Actual fetch execution skipped: `true`
-- Symbol list status: `PENDING_FINAL_SYMBOL_APPROVAL`
+- Symbol list status: `FINAL_SYMBOL_LIST_APPROVED`
+- Symbol approval note: operator approved the exact 25-symbol list on 2026-06-13.
 - Data source status: `DATA_SOURCE_PENDING_APPROVAL`
 - Provisional execute-mode source: Binance public klines, pending explicit approval before any production or VPS run.
 - Execute-mode fetcher now has request timeout, retry count, and exponential backoff controls.
