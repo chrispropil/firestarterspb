@@ -1,0 +1,31 @@
+{
+  "status": "CLOUD_CELL1_METRIC_PRODUCER_V1_MANUAL_ONLY",
+  "description": "Manual-only public Bitget Cell 1 metric producer for the approved 25-symbol pilot universe.",
+  "formula_source": "operator_provided_bitget_colab_cell1_2026_06_13",
+  "symbol_config": "configs/cloud_data_pilot_v1_symbols.json",
+  "bitget": {
+    "base_url": "https://api.bitget.com",
+    "product_type": "USDT-FUTURES",
+    "request_sleep_seconds": 0.06,
+    "request_timeout": 12.0,
+    "retries": 2,
+    "retry_backoff": 1.0
+  },
+  "filters": {
+    "min_volume_usd": 1000000
+  },
+  "paths": {
+    "current_metrics_json": "state/cloud_pattern_watch/current_metrics.json",
+    "current_metrics_csv": "state/cloud_pattern_watch/current_metrics.csv",
+    "status": "state/cloud_pattern_watch/cell1_metric_producer_status.json",
+    "report": "reports/cloud_pattern_watch/v1/cell1_metric_producer_report.md"
+  },
+  "safety_flags": {
+    "public_market_fetch_only": true,
+    "raw_candle_storage": false,
+    "exchange_credentials": false,
+    "schedule_activation": false,
+    "execution": false,
+    "symbol_expansion": false
+  }
+}
