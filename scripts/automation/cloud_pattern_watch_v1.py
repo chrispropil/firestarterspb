@@ -93,10 +93,10 @@ def numeric(row: dict[str, Any], key: str) -> float | None:
 def sample_snapshot() -> dict[str, Any]:
     return {
         "timestamp_utc": utc_now(),
-        "source": "embedded_sample",
+        "source": "embedded_sample_approved_symbol",
         "rows": [
             {
-                "symbol": "DEMOUSDT",
+                "symbol": "BTCUSDT",
                 "timestamp_utc": utc_now(),
                 "price": "1.0000",
                 "price_position": 0.92,
@@ -185,7 +185,7 @@ def main() -> int:
 
     if args.sample:
         snapshot = sample_snapshot()
-        snapshot_source = "embedded_sample"
+        snapshot_source = "embedded_sample_approved_symbol"
     else:
         snapshot_path = repo_path(args.snapshot or config["paths"]["snapshot"])
         snapshot = read_json(snapshot_path)
