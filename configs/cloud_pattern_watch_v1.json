@@ -7,9 +7,9 @@
     "secrets_policy": "ntfy topic/token remain on VPS only and must not be committed."
   },
   "watch": {
-    "pattern_key": "fmlc_structure_holdup",
-    "display_label": "FMLC Structure Holdup",
-    "plain_meaning": "Price is elevated while the structure metric remains high, but momentum and participation confirmation are weak.",
+    "pattern_key": "fmlc_hanger",
+    "display_label": "FMLC Hanger",
+    "plain_meaning": "Price is elevated while FMLC remains high, but ER/Flowprint confirmation is weak.",
     "thresholds": {
       "min_price_position": 0.8,
       "min_fmlc": 7.0,
