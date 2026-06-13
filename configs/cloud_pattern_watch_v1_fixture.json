@@ -1,0 +1,26 @@
+{
+  "status": "CLOUD_PATTERN_WATCH_V1_FIXTURE_ONLY",
+  "description": "Committed fixture snapshot for manual Pattern Watch validation. This is not live market data.",
+  "expected_candidates": 1,
+  "expected_display_label": "FMLC Hanger",
+  "expected_pattern_key": "fmlc_hanger",
+  "rows": [
+    {
+      "symbol": "BTCUSDT",
+      "timestamp_utc": "2026-06-13T00:00:00Z",
+      "price": "1.0000",
+      "price_position": 0.92,
+      "fmlc": 8.4,
+      "er": 1.1,
+      "flowprint": 3.2,
+      "raw_score": 5.6
+    }
+  ],
+  "safety": {
+    "fixture_only": true,
+    "live_market_data": false,
+    "trading_execution": false,
+    "scoring_changes": false,
+    "scheduler_activation": false
+  }
+}
