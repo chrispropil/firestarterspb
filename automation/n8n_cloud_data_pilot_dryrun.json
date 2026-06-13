@@ -1,0 +1,55 @@
+{
+  "name": "FirestarterSPB Cloud Data Pilot Dry Run",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "schedule-cloud-data-pilot-dryrun",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://firestarter-worker:8090/run/cloud-data-pilot-dryrun",
+        "sendBody": false,
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "call-cloud-data-pilot-dryrun",
+      "name": "Call Cloud Data Pilot Dry Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [280, 0]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Call Cloud Data Pilot Dry Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

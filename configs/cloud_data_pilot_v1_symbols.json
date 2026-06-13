@@ -1,0 +1,48 @@
+{
+  "status": "FINAL_SYMBOL_LIST_APPROVED",
+  "approved_at_utc": "2026-06-13",
+  "approval_note": "Operator approved this exact 25-symbol pilot list for Cloud Data Pilot v1.",
+  "data_source_status": "DATA_SOURCE_APPROVED_FOR_PHASE_2A_BASELINE",
+  "data_source_approved_at_utc": "2026-06-13",
+  "data_source_note": "Operator approved Binance public klines as the Phase 2A baseline OHLCV source for Cloud Data Pilot v1. This approval is for public historical candle collection only; it does not approve exchange credentials, private endpoints, optimizer production, or trade execution.",
+  "description": "Approved 25-symbol pilot universe for Cloud Data Pilot v1.",
+  "max_symbols": 25,
+  "excluded_symbols": [
+    "1000SHIBUSDT",
+    "1000PEPEUSDT"
+  ],
+  "exclusion_note": "Operator explicitly rejected these replacement symbols for Cloud Data Pilot v1. Do not include them in the pilot universe unless separately re-approved.",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "BNBUSDT",
+    "SOLUSDT",
+    "XRPUSDT",
+    "ADAUSDT",
+    "DOGEUSDT",
+    "AVAXUSDT",
+    "LINKUSDT",
+    "TONUSDT",
+    "TRXUSDT",
+    "DOTUSDT",
+    "BCHUSDT",
+    "NEARUSDT",
+    "MATICUSDT",
+    "LTCUSDT",
+    "UNIUSDT",
+    "ICPUSDT",
+    "ETCUSDT",
+    "APTUSDT",
+    "ARBUSDT",
+    "OPUSDT",
+    "ATOMUSDT",
+    "FILUSDT",
+    "INJUSDT"
+  ],
+  "safety_flags": {
+    "raw_data_mutation": false,
+    "scoring_changes": false,
+    "trading_execution": false,
+    "exchange_credentials": false
+  }
+}
