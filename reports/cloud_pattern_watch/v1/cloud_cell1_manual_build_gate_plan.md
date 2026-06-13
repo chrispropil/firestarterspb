@@ -34,6 +34,8 @@ This branch adds a controlled manual build gate to `scripts/automation/cloud_cel
 - Report directory must be exactly `reports/cloud_pattern_watch/v1`.
 - Base API URL must remain the approved public Bitget endpoint.
 - No raw candle history is written.
+- `current_metrics.json` and `current_metrics.csv` are not replaced when `success_count` is `0`.
+- When at least one symbol succeeds, metric snapshot files are written through temporary files followed by atomic replace.
 - No exchange credentials, private endpoints, optimizer changes, scoring changes, trading execution, Cell 2, scheduler activation, n8n activation, or Pattern Watch ntfy send are added.
 
 ## Manifest / Status
@@ -44,4 +46,3 @@ Every `--manual-build` attempt writes:
 - `reports/cloud_pattern_watch/v1/cell1_manual_build_gate_manifest.json`
 
 Each manifest/status includes mode, gate result, symbol count, max symbols, excluded symbols, output paths, safety flags, and timestamp UTC.
-

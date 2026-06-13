@@ -70,6 +70,11 @@ def write_manual_build_status(mode, gate_result, symbols, symbol_governance, out
     print(f"Manual build manifest path: {repo_relative(manifest_path)}")
     return payload
 
+def atomic_replace_text(path, text):
+    tmp_path = path.with_name(path.name + ".tmp")
+    tmp_path.write_text(text, encoding="utf-8")
+    os.replace(tmp_path, path)
+
 def safety_flags():
     return {
         "raw_candle_history_written": False,
@@ -579,19 +584,23 @@ def run_build(symbols, config):
         "raw_score_parent_status"
     ]
     
-    # 1. Write current_metrics.json
     json_path = output_dir / "current_metrics.json"
-    with json_path.open("w", encoding="utf-8") as f:
-        json.dump(output_rows, f, indent=2)
-    print(f"Saved: {repo_relative(json_path)}")
-        
-    # 2. Write current_metrics.csv
     csv_path = output_dir / "current_metrics.csv"
-    with csv_path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=columns)
-        writer.writeheader()
-        writer.writerows(output_rows)
-    print(f"Saved: {repo_relative(csv_path)}")
+    snapshot_output_files = []
+    if success_count > 0:
+        atomic_replace_text(json_path, json.dumps(output_rows, indent=2) + "\n")
+        print(f"Saved: {repo_relative(json_path)}")
+
+        csv_tmp_path = csv_path.with_name(csv_path.name + ".tmp")
+        with csv_tmp_path.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=columns)
+            writer.writeheader()
+            writer.writerows(output_rows)
+        os.replace(csv_tmp_path, csv_path)
+        print(f"Saved: {repo_relative(csv_path)}")
+        snapshot_output_files = [repo_relative(json_path), repo_relative(csv_path)]
+    else:
+        print("Skipped snapshot write: success_count is 0; existing current_metrics.json/csv preserved.")
         
     # 3. Write cell1_metric_producer_status.json
     status_path = output_dir / "cell1_metric_producer_status.json"
@@ -602,7 +611,9 @@ def run_build(symbols, config):
         "symbols_successful": success_count,
         "symbols_failed": fail_count,
         "errors": errors,
-        "output_files": [repo_relative(json_path), repo_relative(csv_path)]
+        "output_files": snapshot_output_files,
+        "snapshot_write_skipped": success_count == 0,
+        "snapshot_skip_reason": "success_count is 0; existing current_metrics.json/csv preserved" if success_count == 0 else "",
     }
     with status_path.open("w", encoding="utf-8") as f:
         json.dump(status, f, indent=2)
