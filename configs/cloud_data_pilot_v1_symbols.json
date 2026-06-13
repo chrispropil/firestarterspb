@@ -1,8 +1,10 @@
 {
-  "status": "PENDING_FINAL_SYMBOL_APPROVAL",
+  "status": "FINAL_SYMBOL_LIST_APPROVED",
+  "approved_at_utc": "2026-06-13",
+  "approval_note": "Operator approved this exact 25-symbol pilot list for Cloud Data Pilot v1.",
   "data_source_status": "DATA_SOURCE_PENDING_APPROVAL",
   "data_source_note": "Execute mode currently uses Binance public klines as the provisional OHLCV source. This source requires explicit approval before any production or VPS run.",
-  "description": "Conservative placeholder pilot universe for Cloud Data Pilot v1. Do not treat as final production symbols until explicitly approved.",
+  "description": "Approved 25-symbol pilot universe for Cloud Data Pilot v1.",
   "max_symbols": 25,
   "excluded_symbols": [
     "1000SHIBUSDT",
