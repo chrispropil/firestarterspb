@@ -41,6 +41,7 @@ PASS: Cloud Data Pilot v1 dry-run-first scaffold is ready for review.
 - Provisional execute-mode source: Binance public klines, pending explicit approval before any production or VPS run.
 - Execute-mode fetcher now has request timeout, retry count, and exponential backoff controls.
 - Execute-mode manifest counts are rebuilt from the audit logic after append-only writes, so `duplicate_count` and `gap_count` reflect actual files.
+- Explicitly excluded replacement symbols: `1000SHIBUSDT`, `1000PEPEUSDT`. These must not be included in Cloud Data Pilot v1 unless separately re-approved.
 
 ## Validation Commands
 
