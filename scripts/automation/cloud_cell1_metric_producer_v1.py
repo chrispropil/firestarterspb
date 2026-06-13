@@ -18,6 +18,71 @@ import urllib.error
 import pandas as pd
 import numpy as np
 from datetime import datetime, timezone
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+APPROVED_OUTPUT_DIR = REPO_ROOT / "state" / "cloud_pattern_watch"
+APPROVED_REPORT_DIR = REPO_ROOT / "reports" / "cloud_pattern_watch" / "v1"
+MANUAL_BUILD_CONFIRMATION = "CELL1_MANUAL_BUILD_APPROVED"
+
+def utc_now():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+def resolve_repo_path(path_value):
+    path = Path(path_value)
+    if path.is_absolute():
+        return path.resolve()
+    return (REPO_ROOT / path).resolve()
+
+def repo_relative(path):
+    return str(path.resolve().relative_to(REPO_ROOT)).replace("\\", "/")
+
+def ensure_approved_output_paths(config):
+    output_dir = resolve_repo_path(config.get("output_dir", "state/cloud_pattern_watch"))
+    report_dir = resolve_repo_path(config.get("report_dir", "reports/cloud_pattern_watch/v1"))
+    if output_dir != APPROVED_OUTPUT_DIR.resolve():
+        raise ValueError("output_dir must be state/cloud_pattern_watch")
+    if report_dir != APPROVED_REPORT_DIR.resolve():
+        raise ValueError("report_dir must be reports/cloud_pattern_watch/v1")
+    return output_dir, report_dir
+
+def write_manual_build_status(mode, gate_result, symbols, symbol_governance, output_paths, safety_flags, message):
+    output_dir = APPROVED_OUTPUT_DIR
+    report_dir = APPROVED_REPORT_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "timestamp_utc": utc_now(),
+        "mode": mode,
+        "gate_result": gate_result,
+        "message": message,
+        "symbol_count": len(symbols),
+        "max_symbols": symbol_governance.get("max_symbols"),
+        "excluded_symbols": symbol_governance.get("excluded_symbols", []),
+        "output_paths": output_paths,
+        "safety_flags": safety_flags,
+    }
+    status_path = output_dir / "cell1_manual_build_gate_status.json"
+    manifest_path = report_dir / "cell1_manual_build_gate_manifest.json"
+    status_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    manifest_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    print(f"Manual build status path: {repo_relative(status_path)}")
+    print(f"Manual build manifest path: {repo_relative(manifest_path)}")
+    return payload
+
+def safety_flags():
+    return {
+        "raw_candle_history_written": False,
+        "exchange_credentials": False,
+        "private_endpoints": False,
+        "optimizer_changes": False,
+        "scoring_changes": False,
+        "trading_execution": False,
+        "cell_2": False,
+        "scheduler_activation": False,
+        "n8n_activation": False,
+        "pattern_watch_ntfy_send": False,
+    }
 
 def load_governed_symbol_config(symbols_file):
     if not os.path.exists(symbols_file):
@@ -57,6 +122,8 @@ def load_governed_symbol_config(symbols_file):
         raise ValueError("Symbols JSON contains blank or invalid symbol entries")
     if len(normalized_symbols) > max_symbols:
         raise ValueError(f"Symbol count ({len(normalized_symbols)}) exceeds governed max_symbols ({max_symbols})")
+    if max_symbols != 25:
+        raise ValueError(f"Governed max_symbols must equal 25 for Issue #10, got {max_symbols}")
 
     blocked = sorted(symbol for symbol in normalized_symbols if symbol in normalized_excluded)
     if blocked:
@@ -444,12 +511,15 @@ def run_build(symbols, config):
     print("RUNNING BUILD MODE (Fetching active Bitget data)")
     print("--------------------------------------------------")
     
-    output_dir = config.get("output_dir", "state/cloud_pattern_watch")
-    report_dir = config.get("report_dir", "reports/cloud_pattern_watch/v1")
+    approved_output_dir, approved_report_dir = ensure_approved_output_paths(config)
+    output_dir = approved_output_dir
+    report_dir = approved_report_dir
     base_url = config.get("base_url", "https://api.bitget.com")
+    if base_url != "https://api.bitget.com":
+        raise ValueError("base_url must remain the approved public Bitget endpoint")
     
-    os.makedirs(output_dir, exist_ok=True)
-    os.makedirs(report_dir, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_dir.mkdir(parents=True, exist_ok=True)
     
     output_rows = []
     success_count = 0
@@ -510,21 +580,21 @@ def run_build(symbols, config):
     ]
     
     # 1. Write current_metrics.json
-    json_path = os.path.join(output_dir, "current_metrics.json")
-    with open(json_path, "w", encoding="utf-8") as f:
+    json_path = output_dir / "current_metrics.json"
+    with json_path.open("w", encoding="utf-8") as f:
         json.dump(output_rows, f, indent=2)
-    print(f"Saved: {json_path}")
+    print(f"Saved: {repo_relative(json_path)}")
         
     # 2. Write current_metrics.csv
-    csv_path = os.path.join(output_dir, "current_metrics.csv")
-    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+    csv_path = output_dir / "current_metrics.csv"
+    with csv_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=columns)
         writer.writeheader()
         writer.writerows(output_rows)
-    print(f"Saved: {csv_path}")
+    print(f"Saved: {repo_relative(csv_path)}")
         
     # 3. Write cell1_metric_producer_status.json
-    status_path = os.path.join(output_dir, "cell1_metric_producer_status.json")
+    status_path = output_dir / "cell1_metric_producer_status.json"
     status = {
         "timestamp_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "status": "SUCCESS" if fail_count == 0 else "PARTIAL_FAILURE" if success_count > 0 else "FAILURE",
@@ -532,14 +602,14 @@ def run_build(symbols, config):
         "symbols_successful": success_count,
         "symbols_failed": fail_count,
         "errors": errors,
-        "output_files": [json_path, csv_path]
+        "output_files": [repo_relative(json_path), repo_relative(csv_path)]
     }
-    with open(status_path, "w", encoding="utf-8") as f:
+    with status_path.open("w", encoding="utf-8") as f:
         json.dump(status, f, indent=2)
-    print(f"Saved: {status_path}")
+    print(f"Saved: {repo_relative(status_path)}")
         
     # 4. Write cell1_metric_producer_report.md
-    report_path = os.path.join(report_dir, "cell1_metric_producer_report.md")
+    report_path = report_dir / "cell1_metric_producer_report.md"
     report_lines = [
         f"# Cell 1 Metric Producer v1 Execution Report",
         "",
@@ -578,9 +648,9 @@ def run_build(symbols, config):
         for s, err in errors.items():
             report_lines.append(f"| {s} | {err} |")
             
-    with open(report_path, "w", encoding="utf-8") as f:
+    with report_path.open("w", encoding="utf-8") as f:
         f.write("\n".join(report_lines) + "\n")
-    print(f"Saved: {report_path}")
+    print(f"Saved: {repo_relative(report_path)}")
     print("--------------------------------------------------")
     return 0 if fail_count == 0 else 1
 
@@ -589,6 +659,8 @@ def main():
     parser.add_argument("--config", default="configs/cloud_cell1_metric_producer_v1.json", help="Path to config JSON")
     parser.add_argument("--build", action="store_true", help="Rejected for this repair branch; dry-run only")
     parser.add_argument("--dry-run", action="store_true", help="Force dry-run mode")
+    parser.add_argument("--manual-build", action="store_true", help="Run controlled manual build only with confirmation token")
+    parser.add_argument("--confirm-manual-build", default="", help="Required exact token for controlled manual build")
     args = parser.parse_args()
     
     # 1. Load and validate config file
@@ -611,12 +683,7 @@ def main():
             sys.exit(2)
             
     if args.build:
-        print("ERROR: Build mode is disabled for this repair branch; use --dry-run only", file=sys.stderr)
-        sys.exit(2)
-
-    is_dry_run = True
-    if config["dry_run"] is not True and not args.dry_run:
-        print("ERROR: Configuration must remain dry_run=true unless --dry-run is explicitly supplied", file=sys.stderr)
+        print("ERROR: Legacy --build path is rejected; use the manual build gate only", file=sys.stderr)
         sys.exit(2)
         
     # 2. Load governed symbols object
@@ -626,12 +693,86 @@ def main():
     except Exception as e:
         print(f"ERROR: Failed governed symbols validation: {str(e)}", file=sys.stderr)
         sys.exit(2)
-        
-    # Execute according to mode
-    if is_dry_run:
+
+    output_dir, report_dir = ensure_approved_output_paths(config)
+    output_paths = {
+        "output_dir": repo_relative(output_dir),
+        "report_dir": repo_relative(report_dir),
+        "metrics_json": repo_relative(output_dir / "current_metrics.json"),
+        "metrics_csv": repo_relative(output_dir / "current_metrics.csv"),
+        "producer_status": repo_relative(output_dir / "cell1_metric_producer_status.json"),
+        "producer_report": repo_relative(report_dir / "cell1_metric_producer_report.md"),
+        "manual_gate_status": repo_relative(output_dir / "cell1_manual_build_gate_status.json"),
+        "manual_gate_manifest": repo_relative(report_dir / "cell1_manual_build_gate_manifest.json"),
+    }
+
+    if args.manual_build:
+        if args.confirm_manual_build != MANUAL_BUILD_CONFIRMATION:
+            write_manual_build_status(
+                "manual_build",
+                "DENIED_CONFIRMATION_REQUIRED",
+                symbols,
+                symbol_governance,
+                output_paths,
+                safety_flags(),
+                "Manual build denied: missing exact confirmation token.",
+            )
+            print("ERROR: Manual build requires --confirm-manual-build CELL1_MANUAL_BUILD_APPROVED", file=sys.stderr)
+            sys.exit(2)
+
+        print("--------------------------------------------------")
+        print("MANUAL BUILD GATE APPROVED")
+        print("--------------------------------------------------")
+        print(f"Symbol count: {len(symbols)}")
+        print(f"Governed max_symbols: {symbol_governance.get('max_symbols')}")
+        print(f"Excluded symbols: {', '.join(symbol_governance.get('excluded_symbols', [])) or '(none)'}")
+        for label, path in output_paths.items():
+            print(f"{label}: {path}")
+        write_manual_build_status(
+            "manual_build",
+            "APPROVED_CONFIRMED",
+            symbols,
+            symbol_governance,
+            output_paths,
+            safety_flags(),
+            "Manual build approved by exact confirmation token.",
+        )
+        try:
+            result = run_build(symbols, config)
+            gate_result = "COMPLETED" if result == 0 else "COMPLETED_WITH_FAILURES"
+            write_manual_build_status(
+                "manual_build",
+                gate_result,
+                symbols,
+                symbol_governance,
+                output_paths,
+                safety_flags(),
+                f"Manual build finished with exit code {result}.",
+            )
+            sys.exit(result)
+        except Exception as e:
+            write_manual_build_status(
+                "manual_build",
+                "FAILED_EXCEPTION",
+                symbols,
+                symbol_governance,
+                output_paths,
+                safety_flags(),
+                f"Manual build failed: {str(e)}",
+            )
+            print(f"ERROR: Manual build failed: {str(e)}", file=sys.stderr)
+            sys.exit(1)
+
+    if config["dry_run"] is not True and not args.dry_run:
+        print("ERROR: Default behavior must remain dry-run; config dry_run must be true", file=sys.stderr)
+        sys.exit(2)
+
+    if args.confirm_manual_build:
+        print("ERROR: --confirm-manual-build is only valid with --manual-build", file=sys.stderr)
+        sys.exit(2)
+
+    if args.dry_run or not args.manual_build:
         sys.exit(run_dry_run(symbols, config, symbol_governance))
-    else:
-        sys.exit(run_build(symbols, config))
 
 if __name__ == "__main__":
     main()
