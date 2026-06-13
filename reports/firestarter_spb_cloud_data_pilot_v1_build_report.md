@@ -37,6 +37,10 @@ PASS: Cloud Data Pilot v1 dry-run-first scaffold is ready for review.
 - Trading execution: `false`
 - Actual fetch execution skipped: `true`
 - Symbol list status: `PENDING_FINAL_SYMBOL_APPROVAL`
+- Data source status: `DATA_SOURCE_PENDING_APPROVAL`
+- Provisional execute-mode source: Binance public klines, pending explicit approval before any production or VPS run.
+- Execute-mode fetcher now has request timeout, retry count, and exponential backoff controls.
+- Execute-mode manifest counts are rebuilt from the audit logic after append-only writes, so `duplicate_count` and `gap_count` reflect actual files.
 
 ## Validation Commands
 
@@ -75,6 +79,9 @@ usage: cloud_data_pilot_fetch_ohlcv.py [-h] [--dry-run | --execute] --symbols
                                        SYMBOLS [--timeframe {1d,1h,4h,5m}]
                                        [--days DAYS] [--output-dir OUTPUT_DIR]
                                        [--manifest MANIFEST] [--report REPORT]
+                                       [--request-timeout REQUEST_TIMEOUT]
+                                       [--retries RETRIES]
+                                       [--retry-backoff RETRY_BACKOFF]
 ```
 
 ```text
@@ -146,11 +153,14 @@ Output summary:
 }
 ```
 
+Patch validation repeated on 2026-06-13 after adding source-approval metadata, retry/backoff handling, and execute-mode audit-derived manifest counts. All commands above exited 0.
+
 ## Safety Boundary Confirmation
 
 - No VPS files were touched.
 - No cloud workflow was activated; n8n export has `"active": false`.
 - The cloud worker execute flag remains disabled by default.
+- Worker route remains dry-run only through the fixed `cloud-data-pilot-dryrun` task.
 - No exchange credentials, API keys, or secrets were added.
 - No trading, order execution, leverage, optimizer production decision, gated-cell activation, or scoring/formula logic was added.
 - Dry-run wrote manifest/report metadata only and did not create `data/cloud_pilot/v1` market data files.

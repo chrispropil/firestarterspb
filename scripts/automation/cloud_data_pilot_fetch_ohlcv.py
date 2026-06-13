@@ -6,12 +6,15 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from cloud_data_pilot_audit import audit_symbol
 from cloud_data_pilot_build_manifest import build_manifest, write_json
 
 
@@ -59,7 +62,29 @@ def load_symbols(path: Path) -> tuple[list[str], str]:
     return symbols, str(payload.get("status", "UNKNOWN"))
 
 
-def fetch_binance_klines(symbol: str, timeframe: str, days: int) -> list[dict[str, str]]:
+def fetch_json_with_retry(url: str, *, timeout: float, retries: int, retry_backoff: float) -> Any:
+    last_error: Exception | None = None
+    for attempt in range(retries + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except (TimeoutError, urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError) as exc:
+            last_error = exc
+            if attempt >= retries:
+                break
+            time.sleep(retry_backoff * (2 ** attempt))
+    raise RuntimeError(f"public OHLCV fetch failed after {retries + 1} attempt(s): {last_error}")
+
+
+def fetch_binance_klines(
+    symbol: str,
+    timeframe: str,
+    days: int,
+    *,
+    timeout: float,
+    retries: int,
+    retry_backoff: float,
+) -> list[dict[str, str]]:
     end = datetime.now(timezone.utc)
     start = end - timedelta(days=days)
     end_ms = int(end.timestamp() * 1000)
@@ -77,8 +102,7 @@ def fetch_binance_klines(symbol: str, timeframe: str, days: int) -> list[dict[st
             }
         )
         url = f"https://api.binance.com/api/v3/klines?{params}"
-        with urllib.request.urlopen(url, timeout=30) as response:
-            batch = json.loads(response.read().decode("utf-8"))
+        batch = fetch_json_with_retry(url, timeout=timeout, retries=retries, retry_backoff=retry_backoff)
         if not batch:
             break
         rows.extend(batch)
@@ -167,6 +191,29 @@ def planned_count(days: int, timeframe: str) -> int:
     return int(days * 24 * 60 / TIMEFRAME_MINUTES[timeframe])
 
 
+def audit_execute_outputs(
+    symbols: list[str],
+    output_dir: Path,
+    timeframe: str,
+) -> tuple[dict[str, int], dict[str, str | None], dict[str, str | None], int, int, list[str]]:
+    row_counts: dict[str, int] = {}
+    first: dict[str, str | None] = {}
+    last: dict[str, str | None] = {}
+    missing_symbols: list[str] = []
+    duplicate_count = 0
+    gap_count = 0
+    for symbol in symbols:
+        record = audit_symbol(output_dir / timeframe / f"{symbol}.csv", timeframe)
+        row_counts[symbol] = int(record["row_count"])
+        first[symbol] = record["first_candle"]
+        last[symbol] = record["last_candle"]
+        duplicate_count += int(record["duplicate_count"])
+        gap_count += int(record["gap_count"])
+        if not record["exists"]:
+            missing_symbols.append(symbol)
+    return row_counts, first, last, duplicate_count, gap_count, missing_symbols
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Fetch or plan Cloud Data Pilot v1 public OHLCV baseline data.")
     mode = parser.add_mutually_exclusive_group()
@@ -178,6 +225,9 @@ def main() -> int:
     parser.add_argument("--output-dir", default="data/cloud_pilot/v1", help="Approved cloud pilot data directory.")
     parser.add_argument("--manifest", default="reports/cloud_data_pilot/v1/manifest.json", help="Manifest output path.")
     parser.add_argument("--report", default="reports/cloud_data_pilot/v1/report.md", help="Run report output path.")
+    parser.add_argument("--request-timeout", type=float, default=30.0, help="Public OHLCV request timeout in seconds.")
+    parser.add_argument("--retries", type=int, default=3, help="Public OHLCV request retry count.")
+    parser.add_argument("--retry-backoff", type=float, default=1.0, help="Initial retry backoff in seconds.")
     args = parser.parse_args()
 
     if args.days < 30 or args.days > 60:
@@ -209,7 +259,14 @@ def main() -> int:
                 completed_symbols.append(symbol)
                 continue
 
-            candles = fetch_binance_klines(symbol, args.timeframe, args.days)
+            candles = fetch_binance_klines(
+                symbol,
+                args.timeframe,
+                args.days,
+                timeout=args.request_timeout,
+                retries=args.retries,
+                retry_backoff=args.retry_backoff,
+            )
             target = output_dir / args.timeframe / f"{symbol}.csv"
             written, duplicates = append_candles(target, candles, symbol, args.timeframe)
             duplicate_count += duplicates
@@ -224,6 +281,24 @@ def main() -> int:
             failed_symbols.append({"symbol": symbol, "error": str(exc)})
 
     ended = utc_now()
+    gap_count = 0
+    if mode == "execute":
+        (
+            row_count_by_symbol,
+            first_candle_by_symbol,
+            last_candle_by_symbol,
+            duplicate_count,
+            gap_count,
+            missing_symbols,
+        ) = audit_execute_outputs(symbols, output_dir, args.timeframe)
+        completed_symbols = [symbol for symbol in symbols if symbol not in missing_symbols]
+        known_failures = {item["symbol"] for item in failed_symbols}
+        failed_symbols.extend(
+            {"symbol": symbol, "error": "missing output file after execute-mode audit"}
+            for symbol in missing_symbols
+            if symbol not in known_failures
+        )
+
     manifest = build_manifest(
         run_id=run_id,
         started_at_utc=started,
@@ -235,7 +310,7 @@ def main() -> int:
         first_candle_by_symbol=first_candle_by_symbol,
         last_candle_by_symbol=last_candle_by_symbol,
         duplicate_count=duplicate_count,
-        gap_count=0,
+        gap_count=gap_count,
         failed_symbols=failed_symbols,
         output_paths={
             "output_dir": output_dir.relative_to(REPO_ROOT).as_posix(),

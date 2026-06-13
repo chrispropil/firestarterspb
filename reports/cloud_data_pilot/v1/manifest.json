@@ -1,6 +1,6 @@
 {
   "duplicate_count": 0,
-  "ended_at_utc": "2026-06-13T18:30:30+00:00",
+  "ended_at_utc": "2026-06-13T18:40:11+00:00",
   "failed_symbols": [],
   "first_candle_by_symbol": {
     "ADAUSDT": null,
@@ -92,9 +92,9 @@
     "XRPUSDT": 8640
   },
   "row_count_total": 216000,
-  "run_id": "cloud-data-pilot-v1-20260613T183030+0000",
+  "run_id": "cloud-data-pilot-v1-20260613T184011+0000",
   "scoring_changes": false,
-  "started_at_utc": "2026-06-13T18:30:30+00:00",
+  "started_at_utc": "2026-06-13T18:40:11+00:00",
   "symbol_count_completed": 25,
   "symbol_count_requested": 25,
   "trading_execution": false
