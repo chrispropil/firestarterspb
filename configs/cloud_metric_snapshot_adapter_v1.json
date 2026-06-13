@@ -1,0 +1,15 @@
+{
+  "status": "MANUAL_ONLY",
+  "symbol_config": "configs/cloud_data_pilot_v1_symbols.json",
+  "sources": [
+    {"label": "state_json", "path": "state/cloud_pattern_watch/current_metrics.json", "format": "json"},
+    {"label": "state_csv", "path": "state/cloud_pattern_watch/current_metrics.csv", "format": "csv"},
+    {"label": "inbox_json", "glob": "state/cloud_metric_snapshots/*.json", "format": "json"},
+    {"label": "inbox_csv", "glob": "state/cloud_metric_snapshots/*.csv", "format": "csv"}
+  ],
+  "paths": {
+    "current_snapshot": "state/cloud_pattern_watch/current_snapshot.json",
+    "adapter_status": "state/cloud_pattern_watch/metric_snapshot_adapter_status.json",
+    "report": "reports/cloud_pattern_watch/v1/metric_snapshot_adapter_report.md"
+  }
+}
