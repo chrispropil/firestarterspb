@@ -18,6 +18,7 @@ from ntfy_notify import send_ntfy
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG = REPO_ROOT / "configs" / "cloud_pattern_watch_v1.json"
+DEFAULT_FIXTURE = REPO_ROOT / "configs" / "cloud_pattern_watch_v1_fixture.json"
 
 
 def utc_now() -> str:
@@ -58,6 +59,7 @@ def write_report(path: Path, event: dict[str, Any]) -> None:
         "",
         f"Generated UTC: `{event['timestamp_utc']}`",
         f"Mode: `{event['mode']}`",
+        f"Fixture test: `{event.get('fixture_test', False)}`",
         f"Snapshot source: `{event['snapshot_source']}`",
         f"Rows evaluated: `{event['rows_evaluated']}`",
         f"Rows rejected: `{event['rows_rejected']}`",
@@ -204,10 +206,15 @@ def main() -> int:
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
     parser.add_argument("--snapshot", default=None, help="Optional metric snapshot JSON path.")
     parser.add_argument("--sample", action="store_true", help="Use embedded sample snapshot.")
+    parser.add_argument("--fixture-test", action="store_true", help="Use committed fixture snapshot for controlled manual testing.")
+    parser.add_argument("--fixture-file", default=str(DEFAULT_FIXTURE), help="Fixture JSON path used with --fixture-test.")
     parser.add_argument("--send", action="store_true", help="Send ntfy when candidates exist or notify-empty is set.")
     parser.add_argument("--dry-run", action="store_true", help="Evaluate and write logs/reports without ntfy send.")
     parser.add_argument("--notify-empty", action="store_true", help="Send a no-candidates message. Useful for manual tests only.")
     args = parser.parse_args()
+
+    if args.fixture_test and (args.sample or args.snapshot):
+        raise SystemExit("--fixture-test cannot be combined with --sample or --snapshot")
 
     config = read_json(repo_path(args.config))
     approved, excluded, symbol_config_status = load_symbol_guard(config)
@@ -216,7 +223,12 @@ def main() -> int:
     display_label = watch["display_label"]
     thresholds = watch["thresholds"]
 
-    if args.sample:
+    fixture_test = bool(args.fixture_test)
+    if fixture_test:
+        fixture_path = repo_path(args.fixture_file)
+        snapshot = read_json(fixture_path)
+        snapshot_source = str(fixture_path.relative_to(REPO_ROOT)) if fixture_path.is_relative_to(REPO_ROOT) else str(fixture_path)
+    elif args.sample:
         snapshot = sample_snapshot()
         snapshot_source = "embedded_sample_approved_symbol"
     else:
@@ -231,6 +243,7 @@ def main() -> int:
     event = {
         "timestamp_utc": utc_now(),
         "mode": "send" if args.send else "dry_run",
+        "fixture_test": fixture_test,
         "watch_status": config["status"],
         "display_label": display_label,
         "pattern_key": pattern_key,
