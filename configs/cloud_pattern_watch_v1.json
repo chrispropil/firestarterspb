@@ -1,0 +1,48 @@
+{
+  "status": "CLOUD_PATTERN_WATCH_V1_MANUAL_ONLY",
+  "description": "Manual-only research notification watch for precomputed Firestarter metric snapshots. No market data fetch, no production scoring, no trading.",
+  "ntfy": {
+    "env_path": "/root/.config/firestarter/ntfy.env",
+    "secrets_policy": "ntfy topic/token remain on VPS only and must not be committed."
+  },
+  "watch": {
+    "pattern_key": "fmlc_structure_holdup",
+    "display_label": "FMLC Structure Holdup",
+    "plain_meaning": "Price is elevated while the structure metric remains high, but momentum and participation confirmation are weak.",
+    "thresholds": {
+      "min_price_position": 0.8,
+      "min_fmlc": 7.0,
+      "max_er": 3.0,
+      "max_flowprint": 6.0,
+      "max_raw_score": 7.0
+    }
+  },
+  "notification": {
+    "priority": "4",
+    "tags": "fire,chart_with_downwards_trend"
+  },
+  "paths": {
+    "snapshot": "state/cloud_pattern_watch/current_snapshot.json",
+    "event_log": "state/cloud_pattern_watch/events.jsonl",
+    "report": "reports/cloud_pattern_watch/v1/latest_report.md"
+  },
+  "input_schema": {
+    "rows_required_fields": [
+      "symbol",
+      "price_position",
+      "fmlc",
+      "er",
+      "flowprint",
+      "raw_score"
+    ],
+    "price_position_definition": "0.0 to 1.0 normalized location in the recent range, where 1.0 is near the recent high."
+  },
+  "safety_flags": {
+    "raw_data_mutation": false,
+    "scoring_changes": false,
+    "trading_execution": false,
+    "exchange_credentials": false,
+    "optimizer_production": false,
+    "n8n_schedule_activation": false
+  }
+}
