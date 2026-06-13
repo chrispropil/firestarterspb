@@ -2,8 +2,9 @@
   "status": "FINAL_SYMBOL_LIST_APPROVED",
   "approved_at_utc": "2026-06-13",
   "approval_note": "Operator approved this exact 25-symbol pilot list for Cloud Data Pilot v1.",
-  "data_source_status": "DATA_SOURCE_PENDING_APPROVAL",
-  "data_source_note": "Execute mode currently uses Binance public klines as the provisional OHLCV source. This source requires explicit approval before any production or VPS run.",
+  "data_source_status": "DATA_SOURCE_APPROVED_FOR_PHASE_2A_BASELINE",
+  "data_source_approved_at_utc": "2026-06-13",
+  "data_source_note": "Operator approved Binance public klines as the Phase 2A baseline OHLCV source for Cloud Data Pilot v1. This approval is for public historical candle collection only; it does not approve exchange credentials, private endpoints, optimizer production, or trade execution.",
   "description": "Approved 25-symbol pilot universe for Cloud Data Pilot v1.",
   "max_symbols": 25,
   "excluded_symbols": [
