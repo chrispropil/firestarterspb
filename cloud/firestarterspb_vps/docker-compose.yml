@@ -82,7 +82,7 @@ services:
     image: nginx:1.27-alpine
     restart: unless-stopped
     ports:
-      - "${DASHBOARD_PORT:-8080}:80"
+      - "127.0.0.1:${DASHBOARD_PORT:-8080}:80"
     volumes:
       - ../../reports/html:/usr/share/nginx/html:ro
     depends_on:
