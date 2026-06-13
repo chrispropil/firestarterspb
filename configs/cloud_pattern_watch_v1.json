@@ -1,6 +1,7 @@
 {
   "status": "CLOUD_PATTERN_WATCH_V1_MANUAL_ONLY",
   "description": "Manual-only research notification watch for precomputed Firestarter metric snapshots. No market data fetch, no production scoring, no trading.",
+  "symbol_config": "configs/cloud_data_pilot_v1_symbols.json",
   "ntfy": {
     "env_path": "/root/.config/firestarter/ntfy.env",
     "secrets_policy": "ntfy topic/token remain on VPS only and must not be committed."
