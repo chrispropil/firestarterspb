@@ -74,6 +74,22 @@ TASKS = {
         "--sample",
         "--send",
     ],
+    "cloud-metric-snapshot-dryrun": [
+        "cloud_metric_snapshot_adapter_v1.py",
+        "--dry-run",
+    ],
+    "cloud-metric-snapshot-build": [
+        "cloud_metric_snapshot_adapter_v1.py",
+        "--write",
+    ],
+    "cloud-research-pattern-current-dryrun": [
+        "cloud_pattern_watch_v1.py",
+        "--dry-run",
+    ],
+    "cloud-research-pattern-current-send": [
+        "cloud_pattern_watch_v1.py",
+        "--send",
+    ],
 }
 
 

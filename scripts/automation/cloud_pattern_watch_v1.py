@@ -41,6 +41,16 @@ def append_jsonl(path: Path, payload: dict[str, Any]) -> None:
         handle.write(json.dumps(payload, sort_keys=True) + "\n")
 
 
+def load_symbol_guard(config: dict[str, Any]) -> tuple[set[str], set[str], str]:
+    symbol_config = config.get("symbol_config")
+    if not symbol_config:
+        return set(), set(), "UNCONFIGURED"
+    payload = read_json(repo_path(symbol_config))
+    approved = {str(symbol).upper().strip() for symbol in payload.get("symbols", []) if str(symbol).strip()}
+    excluded = {str(symbol).upper().strip() for symbol in payload.get("excluded_symbols", []) if str(symbol).strip()}
+    return approved, excluded, str(payload.get("status", "UNKNOWN"))
+
+
 def write_report(path: Path, event: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = [
@@ -50,7 +60,9 @@ def write_report(path: Path, event: dict[str, Any]) -> None:
         f"Mode: `{event['mode']}`",
         f"Snapshot source: `{event['snapshot_source']}`",
         f"Rows evaluated: `{event['rows_evaluated']}`",
+        f"Rows rejected: `{event['rows_rejected']}`",
         f"Candidates: `{len(event['candidates'])}`",
+        f"Symbol config status: `{event['symbol_config_status']}`",
         "",
         "## Safety",
         "",
@@ -116,6 +128,26 @@ def rows_from_snapshot(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in rows if isinstance(row, dict)]
 
 
+def apply_symbol_guard(rows: list[dict[str, Any]], approved: set[str], excluded: set[str]) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    if not approved and not excluded:
+        return rows, {}
+    kept: list[dict[str, Any]] = []
+    rejected: dict[str, int] = {}
+    for row in rows:
+        symbol = str(row.get("symbol", "")).upper().strip()
+        if not symbol:
+            rejected["missing_symbol"] = rejected.get("missing_symbol", 0) + 1
+            continue
+        if symbol in excluded:
+            rejected["excluded_symbol"] = rejected.get("excluded_symbol", 0) + 1
+            continue
+        if approved and symbol not in approved:
+            rejected["unapproved_symbol"] = rejected.get("unapproved_symbol", 0) + 1
+            continue
+        kept.append(row)
+    return kept, rejected
+
+
 def evaluate_row(row: dict[str, Any], thresholds: dict[str, Any], pattern_key: str) -> dict[str, Any] | None:
     symbol = str(row.get("symbol", "")).upper().strip()
     if not symbol:
@@ -178,6 +210,7 @@ def main() -> int:
     args = parser.parse_args()
 
     config = read_json(repo_path(args.config))
+    approved, excluded, symbol_config_status = load_symbol_guard(config)
     watch = config["watch"]
     pattern_key = watch["pattern_key"]
     display_label = watch["display_label"]
@@ -191,7 +224,8 @@ def main() -> int:
         snapshot = read_json(snapshot_path)
         snapshot_source = str(snapshot_path.relative_to(REPO_ROOT)) if snapshot_path.is_relative_to(REPO_ROOT) else str(snapshot_path)
 
-    rows = rows_from_snapshot(snapshot)
+    raw_rows = rows_from_snapshot(snapshot)
+    rows, rejected = apply_symbol_guard(raw_rows, approved, excluded)
     candidates = [candidate for row in rows if (candidate := evaluate_row(row, thresholds, pattern_key))]
 
     event = {
@@ -202,6 +236,9 @@ def main() -> int:
         "pattern_key": pattern_key,
         "snapshot_source": snapshot_source,
         "rows_evaluated": len(rows),
+        "rows_rejected": sum(rejected.values()),
+        "reject_reasons": rejected,
+        "symbol_config_status": symbol_config_status,
         "candidates": candidates,
         "ok": True,
         "safety_flags": config["safety_flags"],
