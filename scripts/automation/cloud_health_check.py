@@ -22,6 +22,22 @@ TASKS = {
     "viewer-refresh": ["cloud_refresh_viewer_once.py", "--dry-run"],
     "result-collector": ["cloud_result_collector.py", "--dry-run"],
     "optimizer-queue-stub": ["firestarter_optimizer_queue_stub.py", "--dry-run"],
+    "cloud-data-pilot-dryrun": [
+        "cloud_data_pilot_fetch_ohlcv.py",
+        "--dry-run",
+        "--symbols",
+        "configs/cloud_data_pilot_v1_symbols.json",
+        "--timeframe",
+        "5m",
+        "--days",
+        "30",
+        "--output-dir",
+        "data/cloud_pilot/v1",
+        "--manifest",
+        "reports/cloud_data_pilot/v1/manifest.json",
+        "--report",
+        "reports/cloud_data_pilot/v1/report.md",
+    ],
 }
 
 
