@@ -64,6 +64,16 @@ TASKS = {
         "Cloud Alert Bridge v1 manual worker-route test. Research only. No scoring/trading.",
         "--send",
     ],
+    "cloud-research-pattern-dryrun": [
+        "cloud_pattern_watch_v1.py",
+        "--sample",
+        "--dry-run",
+    ],
+    "cloud-research-pattern-send-test": [
+        "cloud_pattern_watch_v1.py",
+        "--sample",
+        "--send",
+    ],
 }
 
 
