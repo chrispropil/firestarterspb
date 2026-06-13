@@ -38,9 +38,10 @@ PASS: Cloud Data Pilot v1 dry-run-first scaffold is ready for review.
 - Actual fetch execution skipped: `true`
 - Symbol list status: `FINAL_SYMBOL_LIST_APPROVED`
 - Symbol approval note: operator approved the exact 25-symbol list on 2026-06-13.
-- Data source status: `DATA_SOURCE_PENDING_APPROVAL`
-- Provisional execute-mode source: Binance public klines, pending explicit approval before any production or VPS run.
-- Execute-mode fetcher now has request timeout, retry count, and exponential backoff controls.
+- Data source status: `DATA_SOURCE_APPROVED_FOR_PHASE_2A_BASELINE`
+- Approved execute-mode source: Binance public klines for Phase 2A public historical OHLCV baseline collection only.
+- Data source approval does not approve exchange credentials, private endpoints, optimizer production, scoring changes, or trade execution.
+- Execute-mode fetcher has request timeout, retry count, and exponential backoff controls.
 - Execute-mode manifest counts are rebuilt from the audit logic after append-only writes, so `duplicate_count` and `gap_count` reflect actual files.
 - Explicitly excluded replacement symbols: `1000SHIBUSDT`, `1000PEPEUSDT`. These must not be included in Cloud Data Pilot v1 unless separately re-approved.
 
@@ -170,4 +171,4 @@ Patch validation repeated on 2026-06-13 after adding source-approval metadata, r
 
 ## Missing Dependencies
 
-None for dry-run validation. Execute mode would require outbound network access to the public OHLCV source and explicit operator approval.
+None for dry-run validation. Execute mode requires outbound network access to Binance public klines and explicit operator approval at the deployment step.
