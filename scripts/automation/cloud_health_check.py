@@ -38,6 +38,32 @@ TASKS = {
         "--report",
         "reports/cloud_data_pilot/v1/report.md",
     ],
+    "cloud-alert-bridge-dryrun": [
+        "cloud_alert_bridge.py",
+        "--event-type",
+        "baseline_audit",
+        "--dry-run",
+    ],
+    "cloud-alert-bridge-send-baseline-audit": [
+        "cloud_alert_bridge.py",
+        "--event-type",
+        "baseline_audit",
+        "--send",
+    ],
+    "cloud-alert-bridge-send-health": [
+        "cloud_alert_bridge.py",
+        "--event-type",
+        "health",
+        "--send",
+    ],
+    "cloud-alert-bridge-send-manual-test": [
+        "cloud_alert_bridge.py",
+        "--event-type",
+        "manual_test",
+        "--message",
+        "Cloud Alert Bridge v1 manual worker-route test. Research only. No scoring/trading.",
+        "--send",
+    ],
 }
 
 
