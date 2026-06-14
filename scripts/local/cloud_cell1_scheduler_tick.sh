@@ -10,6 +10,7 @@ LOG_DIR="${REPO_ROOT}/logs/cloud"
 STATUS_PATH="${STATE_DIR}/cell1_scheduler_tick_status.json"
 LOCK_PATH="${STATE_DIR}/cell1_scheduler_tick.lock"
 LOG_PATH="${LOG_DIR}/cell1_scheduler_tick.log"
+ADAPTER_STATUS_PATH="${STATE_DIR}/metric_snapshot_adapter_status.json"
 
 mkdir -p "${STATE_DIR}" "${LOG_DIR}"
 
@@ -23,6 +24,9 @@ if ! flock -n 9; then
   "status": "SKIPPED_LOCK_HELD",
   "producer_exit_code": null,
   "adapter_exit_code": null,
+  "adapter_ok": null,
+  "adapter_snapshot_written": null,
+  "adapter_rows_accepted": null,
   "snapshot_adapter_write": false,
   "pattern_watch_send": false,
   "scheduler_activation": false,
@@ -49,9 +53,44 @@ python scripts/automation/cloud_cell1_metric_producer_v1.py \
 ADAPTER_EXIT=0
 python scripts/automation/cloud_metric_snapshot_adapter_v1.py --write >> "${LOG_PATH}" 2>&1 || ADAPTER_EXIT=$?
 
+ADAPTER_SUMMARY_JSON="$(python - <<'PY'
+import json
+from pathlib import Path
+
+path = Path('state/cloud_pattern_watch/metric_snapshot_adapter_status.json')
+if not path.exists():
+    print(json.dumps({
+        'adapter_ok': False,
+        'adapter_snapshot_written': False,
+        'adapter_rows_accepted': 0,
+        'adapter_symbols_accepted': 0,
+        'adapter_status': 'MISSING_STATUS_FILE',
+    }))
+else:
+    payload = json.loads(path.read_text(encoding='utf-8'))
+    print(json.dumps({
+        'adapter_ok': bool(payload.get('ok')),
+        'adapter_snapshot_written': bool(payload.get('snapshot_written')),
+        'adapter_rows_accepted': int(payload.get('rows_accepted') or 0),
+        'adapter_symbols_accepted': int(payload.get('symbols_accepted') or 0),
+        'adapter_status': str(payload.get('status') or 'UNKNOWN'),
+    }))
+PY
+)"
+
+ADAPTER_OK="$(python -c "import json,sys; print(str(json.loads(sys.argv[1])['adapter_ok']).lower())" "${ADAPTER_SUMMARY_JSON}")"
+ADAPTER_SNAPSHOT_WRITTEN="$(python -c "import json,sys; print(str(json.loads(sys.argv[1])['adapter_snapshot_written']).lower())" "${ADAPTER_SUMMARY_JSON}")"
+ADAPTER_ROWS_ACCEPTED="$(python -c "import json,sys; print(json.loads(sys.argv[1])['adapter_rows_accepted'])" "${ADAPTER_SUMMARY_JSON}")"
+ADAPTER_SYMBOLS_ACCEPTED="$(python -c "import json,sys; print(json.loads(sys.argv[1])['adapter_symbols_accepted'])" "${ADAPTER_SUMMARY_JSON}")"
+ADAPTER_STATUS="$(python -c "import json,sys; print(json.loads(sys.argv[1])['adapter_status'])" "${ADAPTER_SUMMARY_JSON}")"
+
 TS_END="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-if [ "${PRODUCER_EXIT}" -eq 0 ] && [ "${ADAPTER_EXIT}" -eq 0 ]; then
-  STATUS="PASS"
+if [ "${ADAPTER_EXIT}" -eq 0 ] && [ "${ADAPTER_OK}" = "true" ] && [ "${ADAPTER_SNAPSHOT_WRITTEN}" = "true" ] && [ "${ADAPTER_ROWS_ACCEPTED}" -gt 0 ]; then
+  if [ "${PRODUCER_EXIT}" -eq 0 ]; then
+    STATUS="PASS"
+  else
+    STATUS="PASS_WITH_PRODUCER_WARNINGS"
+  fi
 else
   STATUS="FAIL"
 fi
@@ -62,7 +101,13 @@ cat > "${STATUS_PATH}" <<JSON
   "started_utc": "${TS_START}",
   "status": "${STATUS}",
   "producer_exit_code": ${PRODUCER_EXIT},
+  "producer_partial_allowed": true,
   "adapter_exit_code": ${ADAPTER_EXIT},
+  "adapter_ok": ${ADAPTER_OK},
+  "adapter_snapshot_written": ${ADAPTER_SNAPSHOT_WRITTEN},
+  "adapter_rows_accepted": ${ADAPTER_ROWS_ACCEPTED},
+  "adapter_symbols_accepted": ${ADAPTER_SYMBOLS_ACCEPTED},
+  "adapter_status": "${ADAPTER_STATUS}",
   "snapshot_adapter_write": true,
   "pattern_watch_send": false,
   "scheduler_activation": false,
@@ -72,5 +117,5 @@ cat > "${STATUS_PATH}" <<JSON
 }
 JSON
 
-printf '%s scheduler_tick end status=%s producer_exit=%s adapter_exit=%s\n' "${TS_END}" "${STATUS}" "${PRODUCER_EXIT}" "${ADAPTER_EXIT}" >> "${LOG_PATH}"
+printf '%s scheduler_tick end status=%s producer_exit=%s adapter_exit=%s adapter_ok=%s adapter_snapshot_written=%s adapter_rows_accepted=%s\n' "${TS_END}" "${STATUS}" "${PRODUCER_EXIT}" "${ADAPTER_EXIT}" "${ADAPTER_OK}" "${ADAPTER_SNAPSHOT_WRITTEN}" "${ADAPTER_ROWS_ACCEPTED}" >> "${LOG_PATH}"
 exit 0
