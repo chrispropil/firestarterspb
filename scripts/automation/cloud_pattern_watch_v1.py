@@ -19,6 +19,7 @@ from ntfy_notify import send_ntfy
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG = REPO_ROOT / "configs" / "cloud_pattern_watch_v1.json"
 DEFAULT_FIXTURE = REPO_ROOT / "configs" / "cloud_pattern_watch_v1_fixture.json"
+CLOUD_ORIGIN_TAG = "[CLOUD]"
 
 
 def utc_now() -> str:
@@ -59,6 +60,9 @@ def write_report(path: Path, event: dict[str, Any]) -> None:
         "",
         f"Generated UTC: `{event['timestamp_utc']}`",
         f"Mode: `{event['mode']}`",
+        f"Origin: `{event.get('origin', 'cloud')}`",
+        f"Display label: `{event['display_label']}`",
+        f"Notification title: `{event.get('notification_title', '')}`",
         f"Fixture test: `{event.get('fixture_test', False)}`",
         f"Snapshot source: `{event['snapshot_source']}`",
         f"Rows evaluated: `{event['rows_evaluated']}`",
@@ -188,13 +192,18 @@ def evaluate_row(row: dict[str, Any], thresholds: dict[str, Any], pattern_key: s
     }
 
 
+def origin_title(display_label: str) -> str:
+    return f"{CLOUD_ORIGIN_TAG} {display_label}"
+
+
 def build_message(display_label: str, candidates: list[dict[str, Any]]) -> str:
+    tagged_label = origin_title(display_label)
     if not candidates:
-        return f"{display_label}: no candidates. Research only."
+        return f"{tagged_label}: no candidates. Research only."
     first = candidates[0]
     extra = "" if len(candidates) == 1 else f" +{len(candidates) - 1} more"
     return (
-        f"{display_label} — {first['symbol']}{extra}. "
+        f"{tagged_label} — {first['symbol']}{extra}. "
         f"price_position={first['price_position']:.2f} fmlc={first['fmlc']:.2f} "
         f"er={first['er']:.2f} flowprint={first['flowprint']:.2f} raw_score={first['raw_score']:.2f}. "
         "Research only. No trading/scoring change."
@@ -221,6 +230,7 @@ def main() -> int:
     watch = config["watch"]
     pattern_key = watch["pattern_key"]
     display_label = watch["display_label"]
+    notification_title = origin_title(display_label)
     thresholds = watch["thresholds"]
 
     fixture_test = bool(args.fixture_test)
@@ -243,9 +253,12 @@ def main() -> int:
     event = {
         "timestamp_utc": utc_now(),
         "mode": "send" if args.send else "dry_run",
+        "origin": "cloud",
+        "origin_tag": CLOUD_ORIGIN_TAG,
         "fixture_test": fixture_test,
         "watch_status": config["status"],
         "display_label": display_label,
+        "notification_title": notification_title,
         "pattern_key": pattern_key,
         "snapshot_source": snapshot_source,
         "rows_evaluated": len(rows),
@@ -267,7 +280,7 @@ def main() -> int:
     if should_send:
         notification_result = send_ntfy(
             env_path=Path(config["ntfy"]["env_path"]),
-            title=display_label,
+            title=notification_title,
             message=build_message(display_label, candidates),
             priority=str(config["notification"]["priority"]),
             tags=str(config["notification"]["tags"]),
