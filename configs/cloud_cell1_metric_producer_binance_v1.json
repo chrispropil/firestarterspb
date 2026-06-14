@@ -1,0 +1,7 @@
+{
+  "symbols_file": "configs/cloud_data_pilot_v1_symbols.json",
+  "base_url": "https://fapi.binance.com",
+  "output_dir": "state/cloud_pattern_watch",
+  "report_dir": "reports/cloud_pattern_watch/v1",
+  "dry_run": true
+}
